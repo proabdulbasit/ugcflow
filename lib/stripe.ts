@@ -10,8 +10,6 @@ export function getStripe() {
     throw new Error('Missing STRIPE_TEST_SECRET_KEY');
   }
 
-  stripeSingleton = new Stripe(apiKey, {
-    apiVersion: '2026-02-25.clover',
-  });
+  stripeSingleton = new Stripe(apiKey);
   return stripeSingleton;
 }
