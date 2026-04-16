@@ -1,5 +1,17 @@
 import Stripe from 'stripe';
 
-export const stripe = new Stripe(process.env.STRIPE_TEST_SECRET_KEY!, {
-  apiVersion: '2025-01-27-ac',
-});
+let stripeSingleton: Stripe | null = null;
+
+export function getStripe() {
+  if (stripeSingleton) return stripeSingleton;
+
+  const apiKey = process.env.STRIPE_TEST_SECRET_KEY;
+  if (!apiKey) {
+    throw new Error('Missing STRIPE_TEST_SECRET_KEY');
+  }
+
+  stripeSingleton = new Stripe(apiKey, {
+    apiVersion: '2026-02-25.clover',
+  });
+  return stripeSingleton;
+}

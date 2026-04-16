@@ -2,8 +2,10 @@ import Link from 'next/link';
 
 export default async function SuccessPage({
   searchParams,
-}: { searchParams: { session_id?: string } }) {
-  const sessionId = searchParams.session_id;
+}: {
+  searchParams: Promise<{ session_id?: string }>;
+}) {
+  const { session_id: sessionId } = await searchParams;
   let data: any = null;
 
   if (sessionId) {

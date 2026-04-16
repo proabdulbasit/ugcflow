@@ -29,7 +29,7 @@ export default function CreatorBrowse() {
 
     if (campaignData) setCampaigns(campaignData);
     if (applications) {
-      setAppliedIds(new Set(applications.map(a => a.campaign_id)));
+      setAppliedIds(new Set(applications.map((a: any) => a.campaign_id)));
     }
     setLoading(false);
   };

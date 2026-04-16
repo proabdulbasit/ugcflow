@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
-import { stripe } from '@/lib/stripe';
+import { getStripe } from '@/lib/stripe';
 
 export async function GET(req: Request) {
+  const stripe = getStripe();
   const { searchParams } = new URL(req.url);
   const sessionId = searchParams.get('session_id');
   if (!sessionId) return new NextResponse('session_id required', { status: 400 });

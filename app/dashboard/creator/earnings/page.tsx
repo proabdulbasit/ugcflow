@@ -23,9 +23,13 @@ export default function CreatorEarnings() {
       
       if (data) {
         setEarnings(data);
-        const total = data.reduce((acc, curr) => acc + Number(curr.amount), 0);
-        const pending = data.filter(e => e.status === 'pending').reduce((acc, curr) => acc + Number(curr.amount), 0);
-        const paid = data.filter(e => e.status === 'paid').reduce((acc, curr) => acc + Number(curr.amount), 0);
+        const total = data.reduce((acc: number, curr: any) => acc + Number(curr.amount), 0);
+        const pending = data
+          .filter((e: any) => e.status === 'pending')
+          .reduce((acc: number, curr: any) => acc + Number(curr.amount), 0);
+        const paid = data
+          .filter((e: any) => e.status === 'paid')
+          .reduce((acc: number, curr: any) => acc + Number(curr.amount), 0);
         setStats({ total, pending, paid });
       }
       setLoading(false);

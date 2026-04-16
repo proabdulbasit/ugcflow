@@ -21,7 +21,7 @@ export default function CreatorDashboard() {
 
       setStats({
         activeJobs: activeCount || 0,
-        totalEarnings: earnings?.reduce((acc, curr) => acc + Number(curr.amount), 0) || 0,
+        totalEarnings: earnings?.reduce((acc: number, curr: any) => acc + Number(curr.amount), 0) || 0,
         pendingReview: pendingCount || 0
       });
       setLoading(false);

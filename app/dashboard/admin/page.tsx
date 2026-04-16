@@ -19,7 +19,7 @@ export default function AdminDashboard() {
     
     // Changed 'paid' to 'completed' to match webhook logic
     const { data: paymentsData } = await supabase.from('payments').select('amount').eq('status', 'completed');
-    const totalRevenue = paymentsData?.reduce((acc, curr) => acc + Number(curr.amount), 0) || 0;
+    const totalRevenue = paymentsData?.reduce((acc: number, curr: any) => acc + Number(curr.amount), 0) || 0;
 
     setStats({
       pendingCreators: creatorCount || 0,

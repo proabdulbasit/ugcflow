@@ -38,7 +38,7 @@ export default function CreatorAssignments() {
       if (data) {
         const formatted = data.map((item: any) => ({
           ...item.campaigns,
-          deliverableStatus: deliverables?.find(d => d.campaign_id === item.campaign_id)?.status || 'not_started'
+          deliverableStatus: deliverables?.find((d: any) => d.campaign_id === item.campaign_id)?.status || 'not_started'
         }));
         setAssignments(formatted);
       }
