@@ -55,23 +55,10 @@ export default function CreatorApply() {
       return;
     }
 
-    if (authData.user && authData.session) {
-      const { error: creatorError } = await supabase
-        .from('creators')
-        .update({
-          portfolio_url: portfolioUrl,
-          bio: bio,
-          status: 'pending',
-        })
-        .eq('id', authData.user.id);
-
-      if (creatorError) {
-        console.error(creatorError);
-        alert(creatorError.message);
-        setLoading(false);
-        return;
-      }
-    }
+    // Do not PATCH public.creators here.
+    // On a fresh Supabase project this table might not exist yet, which causes:
+    // "Could not find the table 'public.creators' in the schema cache".
+    // The DB trigger (handle_new_user) is responsible for creating/updating role tables.
 
     setLoading(false);
     setSubmitted(true);

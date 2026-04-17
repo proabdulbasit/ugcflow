@@ -58,25 +58,10 @@ export default function BrandApply() {
       return;
     }
 
-    // When a session exists, keep row in sync (redundant with trigger if migrations applied).
-    if (authData.user && authData.session) {
-      const { error: brandError } = await supabase
-        .from('brands')
-        .update({
-          company_name: companyName,
-          website_url: websiteUrl,
-          brand_goals: brandGoals,
-          status: 'pending',
-        })
-        .eq('id', authData.user.id);
-
-      if (brandError) {
-        console.error(brandError);
-        alert(brandError.message);
-        setLoading(false);
-        return;
-      }
-    }
+    // Do not PATCH public.brands here.
+    // On a fresh Supabase project this table might not exist yet, which causes:
+    // "Could not find the table 'public.brands' in the schema cache".
+    // The DB trigger (handle_new_user) is responsible for creating/updating role tables.
 
     setLoading(false);
     setSubmitted(true);
