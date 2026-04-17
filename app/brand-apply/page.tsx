@@ -12,23 +12,44 @@ export default function BrandApply() {
     e.preventDefault();
     setLoading(true);
     
+    if (!supabase) {
+      alert('App configuration error: Supabase environment variables are missing.');
+      return;
+    }
+
     const formData = new FormData(e.currentTarget);
     const email = formData.get('email') as string;
     const fullName = formData.get('fullName') as string;
     const companyName = formData.get('companyName') as string;
     const websiteUrl = formData.get('websiteUrl') as string;
     const brandGoals = formData.get('brandGoals') as string;
+    const password = formData.get('password') as string;
+    const passwordConfirm = formData.get('passwordConfirm') as string;
 
-    // 1. Sign up the user
+    if (password !== passwordConfirm) {
+      alert('Passwords do not match.');
+      setLoading(false);
+      return;
+    }
+    if (password.length < 8) {
+      alert('Password must be at least 8 characters.');
+      setLoading(false);
+      return;
+    }
+
+    // Application fields are copied into brands via DB trigger from user metadata (works with email confirmation).
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
-      password: Math.random().toString(36).slice(-12),
+      password,
       options: {
         data: {
           full_name: fullName,
-          role: 'brand'
-        }
-      }
+          role: 'brand',
+          company_name: companyName,
+          website_url: websiteUrl,
+          brand_goals: brandGoals,
+        },
+      },
     });
 
     if (authError) {
@@ -37,20 +58,23 @@ export default function BrandApply() {
       return;
     }
 
-    // 2. Update the brand record
-    if (authData.user) {
+    // When a session exists, keep row in sync (redundant with trigger if migrations applied).
+    if (authData.user && authData.session) {
       const { error: brandError } = await supabase
         .from('brands')
         .update({
           company_name: companyName,
           website_url: websiteUrl,
           brand_goals: brandGoals,
-          status: 'pending'
+          status: 'pending',
         })
         .eq('id', authData.user.id);
 
       if (brandError) {
         console.error(brandError);
+        alert(brandError.message);
+        setLoading(false);
+        return;
       }
     }
 
@@ -63,7 +87,9 @@ export default function BrandApply() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center px-6">
         <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 max-w-md text-center">
           <h1 className="text-2xl font-bold mb-4">Application Received!</h1>
-          <p className="text-gray-600 mb-6">We've sent a confirmation email. Our team will review your brand and get back to you shortly.</p>
+          <p className="text-gray-600 mb-6">
+            If email confirmation is enabled on your project, check your inbox to verify your account before signing in. Our team will review your brand and get back to you shortly.
+          </p>
           <button onClick={() => window.location.href = '/'} className="w-full py-3 bg-indigo-600 text-white rounded-lg font-bold">
             Back to Home
           </button>
@@ -107,6 +133,31 @@ export default function BrandApply() {
                 placeholder="Tell us about your brand, what you sell, and what you hope to achieve with UGC..."
                 className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none h-32"
               ></textarea>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                <input
+                  name="password"
+                  required
+                  type="password"
+                  minLength={8}
+                  autoComplete="new-password"
+                  className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
+                  placeholder="At least 8 characters"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Confirm password</label>
+                <input
+                  name="passwordConfirm"
+                  required
+                  type="password"
+                  minLength={8}
+                  autoComplete="new-password"
+                  className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
+                />
+              </div>
             </div>
             <button disabled={loading} type="submit" className="w-full py-4 bg-indigo-600 text-white rounded-lg font-bold hover:bg-indigo-700 transition-colors disabled:opacity-50">
               {loading ? 'Submitting...' : 'Submit Application'}

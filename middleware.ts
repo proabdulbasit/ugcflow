@@ -1,6 +1,5 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
-import { type Database } from '@/database.types'
 import type { ResponseCookie } from 'next/dist/compiled/@edge-runtime/cookies'
 
 export async function updateSession(request: NextRequest) {
@@ -14,7 +13,7 @@ export async function updateSession(request: NextRequest) {
     request,
   })
 
-  const supabase = createServerClient<Database>(
+  const supabase = createServerClient(
     supabaseUrl,
     supabaseAnonKey,
     {

@@ -16,6 +16,7 @@ export type Database = {
     Tables: {
       brands: {
         Row: {
+          brand_goals: string | null
           company_name: string | null
           created_at: string
           credits: number
@@ -24,6 +25,7 @@ export type Database = {
           website_url: string | null
         }
         Insert: {
+          brand_goals?: string | null
           company_name?: string | null
           created_at?: string
           credits?: number
@@ -32,6 +34,7 @@ export type Database = {
           website_url?: string | null
         }
         Update: {
+          brand_goals?: string | null
           company_name?: string | null
           created_at?: string
           credits?: number

@@ -15,6 +15,11 @@ export default function PricingPage() {
 
   useEffect(() => {
     const fetchData = async () => {
+      if (!supabase) {
+        setError('Supabase is not configured (missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY).');
+        setLoading(false);
+        return;
+      }
       try {
         const { data: { user: authUser } } = await supabase.auth.getUser();
         setUser(authUser);

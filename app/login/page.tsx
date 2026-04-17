@@ -14,30 +14,39 @@ export default function Login() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!supabase) {
+      setMessage({ type: 'error', text: 'App configuration error: Supabase environment variables are missing.' });
+      return;
+    }
     setLoading(true);
     setMessage(null);
 
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-    if (error) {
-      setMessage({ type: 'error', text: error.message });
-      setLoading(false);
-    } else if (data.user) {
-      // Fetch user role to redirect
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', data.user.id)
-        .single();
-      
-      if (profile) {
-        router.push(`/dashboard/${profile.role}`);
-      } else {
-        router.push('/');
+      if (error) {
+        setMessage({ type: 'error', text: error.message });
+        return;
       }
+
+      if (data.user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', data.user.id)
+          .single();
+
+        if (profile?.role) {
+          router.push(`/dashboard/${profile.role}`);
+        } else {
+          router.push('/');
+        }
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
