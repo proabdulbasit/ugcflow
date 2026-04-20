@@ -73,7 +73,7 @@ export default function BrandApply() {
         <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 max-w-md text-center">
           <h1 className="text-2xl font-bold mb-4">Application Received!</h1>
           <p className="text-gray-600 mb-6">
-            If email confirmation is enabled on your project, check your inbox to verify your account before signing in. Our team will review your brand and get back to you shortly.
+            We've received your application. Our team will review your brand and get back to you shortly.
           </p>
           <button onClick={() => window.location.href = '/'} className="w-full py-3 bg-indigo-600 text-white rounded-lg font-bold">
             Back to Home
