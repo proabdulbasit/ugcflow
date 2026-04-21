@@ -1,17 +1,16 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
-import type { ResponseCookie } from 'next/dist/compiled/@edge-runtime/cookies'
 
 export async function updateSession(request: NextRequest) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
   if (!supabaseUrl || !supabaseAnonKey) {
-    return NextResponse.next({ request })
+    // If Supabase isn't configured in this environment (common on new Vercel projects),
+    // middleware must never hard-fail — just proceed without auth enforcement.
+    return NextResponse.next()
   }
 
-  let supabaseResponse = NextResponse.next({
-    request,
-  })
+  let supabaseResponse = NextResponse.next()
 
   const supabase = createServerClient(
     supabaseUrl,
@@ -21,21 +20,23 @@ export async function updateSession(request: NextRequest) {
         getAll() {
           return request.cookies.getAll()
         },
-        setAll(cookiesToSet: Array<{ name: string; value: string; options: Partial<ResponseCookie> }>) {
-          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
-          supabaseResponse = NextResponse.next({
-            request,
-          })
-          cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
-          )
+        setAll(cookiesToSet: Array<{ name: string; value: string; options?: Parameters<NextResponse['cookies']['set']>[2] }>) {
+          // In the Edge runtime, mutating `request.cookies` can throw. Only write cookies to the response.
+          cookiesToSet.forEach(({ name, value, options }) => supabaseResponse.cookies.set(name, value, options))
         },
       },
     }
   )
 
   // refreshing the auth token
-  const { data: { user } } = await supabase.auth.getUser()
+  let user: unknown = null
+  try {
+    const { data } = await supabase.auth.getUser()
+    user = data?.user ?? null
+  } catch {
+    // If Supabase is unreachable/misconfigured, fail open instead of 500'ing the whole site.
+    return supabaseResponse
+  }
 
   // Protected routes logic
   if (!user && request.nextUrl.pathname.startsWith('/dashboard')) {
