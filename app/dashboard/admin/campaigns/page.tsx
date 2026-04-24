@@ -1,6 +1,6 @@
 'use client';
 import DashboardLayout from '@/components/DashboardLayout';
-import { LayoutDashboard, Users, Video, CreditCard, ExternalLink, Eye } from 'lucide-react';
+import { LayoutDashboard, Users, Video, CreditCard, Eye, Settings } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
@@ -31,6 +31,7 @@ export default function AdminCampaigns() {
     { label: 'Brands', icon: Users, href: '/dashboard/admin/brands' },
     { label: 'Campaigns', icon: Video, href: '/dashboard/admin/campaigns' },
     { label: 'Payments', icon: CreditCard, href: '/dashboard/admin/payments' },
+    { label: 'Settings', icon: Settings, href: '/dashboard/settings' },
   ];
 
   return (

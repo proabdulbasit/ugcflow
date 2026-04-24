@@ -4,12 +4,15 @@ import { LayoutDashboard, Video, CreditCard, Settings, Plus, Clock, CheckCircle2
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 export default function BrandDashboard() {
   const [stats, setStats] = useState({ activeCampaigns: 0, credits: 0, pendingDeliverables: 0 });
   const [recentDeliverables, setRecentDeliverables] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const supabase = createClient();
+  const searchParams = useSearchParams();
+  const router = useRouter();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -29,11 +32,20 @@ export default function BrandDashboard() {
         .eq('brand_id', user.id)
         .eq('status', 'active');
 
-      const { count: pendingCount } = await supabase
-        .from('deliverables')
-        .select('*', { count: 'exact', head: true })
-        .eq('brand_id', user.id)
-        .eq('status', 'pending');
+      const { data: campaignIds } = await supabase
+        .from('campaigns')
+        .select('id')
+        .eq('brand_id', user.id);
+
+      const ids = (campaignIds ?? []).map((c: any) => c.id);
+      const { count: pendingCount } =
+        ids.length === 0
+          ? { count: 0 }
+          : await supabase
+              .from('deliverables')
+              .select('*', { count: 'exact', head: true })
+              .in('campaign_id', ids)
+              .eq('status', 'pending');
 
       setStats({
         activeCampaigns: campaignCount || 0,
@@ -42,16 +54,21 @@ export default function BrandDashboard() {
       });
 
       // 2. Get Recent Deliverables
-      const { data: deliverables } = await supabase
-        .from('deliverables')
-        .select(`
-          *,
-          campaigns (title),
-          creators (profiles (full_name))
-        `)
-        .eq('brand_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(5);
+      const { data: deliverables } =
+        ids.length === 0
+          ? { data: [] as any[] }
+          : await supabase
+              .from('deliverables')
+              .select(
+                `
+                *,
+                campaigns (title),
+                creators (profiles (full_name))
+              `
+              )
+              .in('campaign_id', ids)
+              .order('created_at', { ascending: false })
+              .limit(5);
 
       if (deliverables) setRecentDeliverables(deliverables);
       setLoading(false);
@@ -59,6 +76,25 @@ export default function BrandDashboard() {
 
     fetchData();
   }, []);
+
+  useEffect(() => {
+    const sessionId = searchParams.get('session_id');
+    if (!sessionId) return;
+
+    const run = async () => {
+      try {
+        await fetch('/api/reconcile-checkout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sessionId }),
+        });
+      } finally {
+        router.replace('/dashboard/brand');
+        window.location.reload();
+      }
+    };
+    run();
+  }, [router, searchParams]);
 
   const sidebarItems = [
     { label: 'Overview', icon: LayoutDashboard, href: '/dashboard/brand' },

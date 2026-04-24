@@ -42,15 +42,28 @@ export default function Navbar() {
 
         <div className="flex items-center gap-4">
           {user ? (
-            <Link 
-              href={`/dashboard/${profile?.role || 'brand'}`} 
-              className="px-6 py-2.5 bg-indigo-600 text-white rounded-full font-bold text-sm hover:bg-indigo-700 transition-all"
-            >
-              Dashboard
-            </Link>
+            profile?.role === 'admin' ? null : (
+              <Link
+                href={`/dashboard/${profile?.role || 'brand'}`}
+                className="px-6 py-2.5 bg-indigo-600 text-white rounded-full font-bold text-sm hover:bg-indigo-700 transition-all"
+              >
+                Dashboard
+              </Link>
+            )
           ) : (
             <>
-              <Link href="/login" className="text-sm font-bold text-gray-600 hover:text-indigo-600 transition-colors">Login</Link>
+              <Link
+                href="/login?role=brand"
+                className="text-sm font-bold text-gray-600 hover:text-indigo-600 transition-colors"
+              >
+                Brand Login
+              </Link>
+              <Link
+                href="/login?role=creator"
+                className="text-sm font-bold text-gray-600 hover:text-indigo-600 transition-colors"
+              >
+                Creator Login
+              </Link>
               <Link href="/brand-apply" className="px-6 py-2.5 bg-indigo-600 text-white rounded-full font-bold text-sm hover:bg-indigo-700 transition-all">
                 Get Started
               </Link>

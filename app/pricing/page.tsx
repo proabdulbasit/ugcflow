@@ -6,6 +6,12 @@ import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
 import StripePurchaseButton from '@/components/StripePurchaseButton';
 
+const CREDITS_PER_PACKAGE: Record<string, number> = {
+  starter: 267,
+  growth: 534,
+  scale: 890,
+};
+
 export default function PricingPage() {
   const [packages, setPackages] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -71,12 +77,20 @@ export default function PricingPage() {
         ) : (
           <div className="max-w-6xl mx-auto">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              {packages.map((pkg) => (
+              {packages
+                // Only show the 3 canonical package products.
+                .filter((pkg) => /package/i.test(String(pkg.name || '')))
+                .slice(0, 3)
+                .map((pkg) => (
                 <div 
                   key={pkg.id} 
-                  className={`relative flex flex-col bg-white rounded-3xl border ${pkg.name.includes('Growth') ? 'border-indigo-600 ring-1 ring-indigo-600' : 'border-gray-100'} p-8 shadow-sm hover:shadow-md transition-all`}
+                  className={`relative flex flex-col bg-white rounded-3xl border ${
+                    String(pkg.name).toLowerCase().includes('growth package')
+                      ? 'border-indigo-600 ring-1 ring-indigo-600'
+                      : 'border-gray-100'
+                  } p-8 shadow-sm hover:shadow-md transition-all`}
                 >
-                  {pkg.name.includes('Growth') && (
+                  {String(pkg.name).toLowerCase().includes('growth package') && (
                     <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-indigo-600 text-white px-4 py-1 rounded-full text-sm font-bold">
                       Most Popular
                     </div>
@@ -88,10 +102,21 @@ export default function PricingPage() {
                       <span className="text-4xl font-extrabold text-gray-900">${pkg.price}</span>
                       <span className="text-gray-500 font-medium">/one-time</span>
                     </div>
+                    <div className="inline-flex items-center gap-2 mb-3 bg-indigo-50 text-indigo-700 px-3 py-1.5 rounded-full text-xs font-bold">
+                      {(() => {
+                        const key =
+                          String(pkg.name).toLowerCase().includes('starter') ? 'starter' :
+                          String(pkg.name).toLowerCase().includes('growth') ? 'growth' :
+                          'scale';
+                        return `${CREDITS_PER_PACKAGE[key]} credits`;
+                      })()}
+                    </div>
                     <p className="text-gray-600 text-sm leading-relaxed">
-                      {pkg.name.includes('Starter') ? 'Best for testing creatives' : 
-                       pkg.name.includes('Growth') ? 'Best for consistent ad testing' : 
-                       'Best for brands ready to scale'}
+                      {String(pkg.name).toLowerCase().includes('starter package')
+                        ? 'Best for testing creatives'
+                        : String(pkg.name).toLowerCase().includes('growth package')
+                          ? 'Best for consistent ad testing'
+                          : 'Best for brands ready to scale'}
                     </p>
                   </div>
 

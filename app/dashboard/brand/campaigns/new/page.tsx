@@ -10,7 +10,8 @@ export default function NewCampaign() {
   const [loading, setLoading] = useState(false);
   const [title, setTitle] = useState('');
   const [brief, setBrief] = useState('');
-  const [payout, setPayout] = useState(150);
+  const fixedPayout = 89;
+  const campaignCostCredits = 89;
   const supabase = createClient();
   const router = useRouter();
 
@@ -21,11 +22,34 @@ export default function NewCampaign() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
+    const { data: brand } = await supabase.from('brands').select('credits').eq('id', user.id).single();
+    const available = Number(brand?.credits ?? 0);
+    if (!Number.isFinite(available) || available < campaignCostCredits) {
+      alert(`Not enough credits. You need ${campaignCostCredits} credits to create a campaign.`);
+      setLoading(false);
+      return;
+    }
+
+    const { data: spent, error: spendError } = await supabase.rpc('spend_brand_credits', {
+      brand_id_input: user.id,
+      amount_input: campaignCostCredits,
+    });
+    if (spendError) {
+      alert(spendError.message);
+      setLoading(false);
+      return;
+    }
+    if (!spent) {
+      alert(`Not enough credits. You need ${campaignCostCredits} credits to create a campaign.`);
+      setLoading(false);
+      return;
+    }
+
     const { error } = await supabase.from('campaigns').insert({
       brand_id: user.id,
       title,
       brief,
-      payout_amount: payout,
+      payout_amount: fixedPayout,
       status: 'active'
     });
 
@@ -83,20 +107,16 @@ export default function NewCampaign() {
               ></textarea>
             </div>
 
-            <div>
-              <label className="block text-sm font-bold text-gray-700 mb-2">Creator Payout (per video)</label>
-              <div className="relative">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold">$</span>
-                <input
-                  required
-                  type="number"
-                  value={payout}
-                  onChange={(e) => setPayout(Number(e.target.value))}
-                  className="w-full p-3 pl-8 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
-                  min="50"
-                />
-              </div>
-              <p className="text-xs text-gray-400 mt-2">Minimum payout is $50 per video.</p>
+            <div className="bg-gray-50 border border-gray-100 rounded-2xl p-5">
+              <div className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">Creator payout</div>
+              <div className="text-lg font-black text-gray-900">${fixedPayout} / video</div>
+              <div className="text-xs text-gray-500 mt-1">This is fixed platform-wide.</div>
+            </div>
+
+            <div className="bg-gray-50 border border-gray-100 rounded-2xl p-5">
+              <div className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">Campaign cost</div>
+              <div className="text-lg font-black text-gray-900">{campaignCostCredits} credits</div>
+              <div className="text-xs text-gray-500 mt-1">Credits are deducted when you launch.</div>
             </div>
 
             <button

@@ -37,7 +37,7 @@ export async function POST(req: Request) {
           },
         ],
         mode: 'payment',
-        success_url: `${baseUrl}/dashboard/brand?session_id={CHECKOUT_SESSION_ID}`,
+        success_url: `${baseUrl}/dashboard/brand/billing?session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${baseUrl}/pricing`,
         customer_email: user.email,
         metadata: {
@@ -87,7 +87,7 @@ export async function POST(req: Request) {
           },
         ],
         mode: 'payment',
-        success_url: `${baseUrl}/dashboard/brand?session_id={CHECKOUT_SESSION_ID}`,
+        success_url: `${baseUrl}/dashboard/brand/billing?session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${baseUrl}/pricing`,
         customer_email: user.email,
         metadata: {

@@ -96,7 +96,7 @@ export default function CreatorAssignments() {
                 </div>
                 <div className="text-sm text-indigo-600 font-medium mb-2">{assignment.brands?.company_name}</div>
                 <div className="text-xs text-gray-400 font-bold uppercase tracking-wider">
-                  Payout: <span className="text-gray-900">${assignment.payout_amount}</span>
+                  Payout: <span className="text-gray-900">$89</span>
                 </div>
               </div>
               <ChevronRight size={20} className="text-gray-300 group-hover:text-indigo-600 transition-all group-hover:translate-x-1" />

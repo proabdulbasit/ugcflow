@@ -1,127 +1,132 @@
 'use client';
 import DashboardLayout from '@/components/DashboardLayout';
-import { LayoutDashboard, Video, Search, DollarSign, TrendingUp, Wallet, Clock, CheckCircle2 } from 'lucide-react';
+import { CreditCard, LayoutDashboard, Search, Settings, Users, Video } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 
-export default function CreatorEarnings() {
-  const [earnings, setEarnings] = useState<any[]>([]);
-  const [stats, setStats] = useState({ total: 0, pending: 0, paid: 0 });
+export default function AdminPaymentsPage() {
+  const [payments, setPayments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [query, setQuery] = useState('');
   const supabase = createClient();
 
   useEffect(() => {
-    const fetchEarnings = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data } = await supabase
-        .from('creator_earnings')
-        .select('*, campaigns(title)')
-        .eq('creator_id', user.id)
-        .order('created_at', { ascending: false });
-      
-      if (data) {
-        setEarnings(data);
-        const total = data.reduce((acc: number, curr: any) => acc + Number(curr.amount), 0);
-        const pending = data
-          .filter((e: any) => e.status === 'pending')
-          .reduce((acc: number, curr: any) => acc + Number(curr.amount), 0);
-        const paid = data
-          .filter((e: any) => e.status === 'paid')
-          .reduce((acc: number, curr: any) => acc + Number(curr.amount), 0);
-        setStats({ total, pending, paid });
-      }
+    const fetchPayments = async () => {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('payments')
+        .select('*, brands(company_name), packages(name)')
+        .order('created_at', { ascending: false })
+        .limit(200);
+      if (error) alert(error.message);
+      setPayments(data ?? []);
       setLoading(false);
     };
-    fetchEarnings();
+    fetchPayments();
   }, []);
 
   const sidebarItems = [
-    { label: 'Overview', icon: LayoutDashboard, href: '/dashboard/creator' },
-    { label: 'Browse Jobs', icon: Search, href: '/dashboard/creator/browse' },
-    { label: 'My Assignments', icon: Video, href: '/dashboard/creator/assignments' },
-    { label: 'Earnings', icon: DollarSign, href: '/dashboard/creator/earnings' },
+    { label: 'Overview', icon: LayoutDashboard, href: '/dashboard/admin' },
+    { label: 'Creators', icon: Users, href: '/dashboard/admin/creators' },
+    { label: 'Brands', icon: Users, href: '/dashboard/admin/brands' },
+    { label: 'Campaigns', icon: Video, href: '/dashboard/admin/campaigns' },
+    { label: 'Submissions', icon: Video, href: '/dashboard/admin/submissions' },
+    { label: 'Payments', icon: CreditCard, href: '/dashboard/admin/payments' },
+    { label: 'Settings', icon: Settings, href: '/dashboard/settings' },
   ];
 
+  const filtered = payments.filter((p: any) => {
+    const q = query.trim().toLowerCase();
+    if (!q) return true;
+    const brand = (p.brands?.company_name ?? '').toLowerCase();
+    const pack = (p.packages?.name ?? '').toLowerCase();
+    const status = (p.status ?? '').toLowerCase();
+    const intent = (p.stripe_payment_intent_id ?? '').toLowerCase();
+    return brand.includes(q) || pack.includes(q) || status.includes(q) || intent.includes(q);
+  });
+
+  const statusBadge = (status: string) => (
+    <span
+      className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+        status === 'completed'
+          ? 'bg-green-50 text-green-600'
+          : status === 'failed'
+            ? 'bg-red-50 text-red-600'
+            : 'bg-orange-50 text-orange-600'
+      }`}
+    >
+      {status}
+    </span>
+  );
+
   return (
-    <DashboardLayout role="Creator" items={sidebarItems}>
+    <DashboardLayout role="Admin" items={sidebarItems}>
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">My Earnings</h1>
-        <p className="text-gray-500 text-sm">Track your income and payout status.</p>
+        <h1 className="text-2xl font-bold text-gray-900">Payments</h1>
+        <p className="text-gray-500 text-sm">View payments created from Stripe checkout + internal records.</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-        <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
-          <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-lg flex items-center justify-center mb-4">
-            <TrendingUp size={20} />
-          </div>
-          <div className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-1">Total Earned</div>
-          <div className="text-3xl font-black text-gray-900">${stats.total.toLocaleString()}</div>
+      <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm mb-6 flex items-center gap-3">
+        <div className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400">
+          <Search size={18} />
         </div>
-
-        <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
-          <div className="w-10 h-10 bg-orange-50 text-orange-600 rounded-lg flex items-center justify-center mb-4">
-            <Clock size={20} />
-          </div>
-          <div className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-1">Pending Payout</div>
-          <div className="text-3xl font-black text-orange-600">${stats.pending.toLocaleString()}</div>
-        </div>
-
-        <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
-          <div className="w-10 h-10 bg-green-50 text-green-600 rounded-lg flex items-center justify-center mb-4">
-            <Wallet size={20} />
-          </div>
-          <div className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-1">Paid to Date</div>
-          <div className="text-3xl font-black text-green-600">${stats.paid.toLocaleString()}</div>
-        </div>
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search brand, package, status, or payment intent…"
+          className="flex-1 p-3 outline-none text-sm"
+        />
       </div>
 
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-        <div className="p-6 border-b border-gray-50">
-          <h3 className="font-bold text-gray-900">Transaction History</h3>
-        </div>
         <table className="w-full text-left">
           <thead>
             <tr className="bg-gray-50 text-gray-500 text-xs font-bold uppercase tracking-wider">
-              <th className="px-6 py-4">Campaign</th>
+              <th className="px-6 py-4">Brand</th>
+              <th className="px-6 py-4">Package</th>
               <th className="px-6 py-4">Amount</th>
               <th className="px-6 py-4">Date</th>
               <th className="px-6 py-4">Status</th>
+              <th className="px-6 py-4">Stripe Intent</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
             {loading ? (
-              <tr><td colSpan={4} className="px-6 py-8 text-center text-gray-400">Loading earnings...</td></tr>
-            ) : earnings.length === 0 ? (
-              <tr><td colSpan={4} className="px-6 py-8 text-center text-gray-400 italic">No earnings recorded yet.</td></tr>
-            ) : earnings.map((earning) => (
-              <tr key={earning.id} className="hover:bg-gray-50/50 transition-colors">
-                <td className="px-6 py-4">
-                  <div className="font-bold text-gray-900">{earning.campaigns?.title}</div>
-                  <div className="text-[10px] text-gray-400 uppercase font-bold">UGC Video Payout</div>
-                </td>
-                <td className="px-6 py-4">
-                  <span className="font-bold text-gray-900">${Number(earning.amount).toLocaleString()}</span>
-                </td>
-                <td className="px-6 py-4 text-sm text-gray-500">
-                  {new Date(earning.created_at).toLocaleDateString()}
-                </td>
-                <td className="px-6 py-4">
-                  <div className="flex items-center gap-2">
-                    {earning.status === 'paid' ? (
-                      <span className="flex items-center gap-1 text-green-600 text-xs font-bold uppercase">
-                        <CheckCircle2 size={14} /> Paid
-                      </span>
-                    ) : (
-                      <span className="flex items-center gap-1 text-orange-600 text-xs font-bold uppercase">
-                        <Clock size={14} /> Pending
-                      </span>
-                    )}
-                  </div>
+              <tr>
+                <td colSpan={7} className="px-6 py-10 text-center text-gray-400">
+                  Loading payments…
                 </td>
               </tr>
-            ))}
+            ) : filtered.length === 0 ? (
+              <tr>
+                <td colSpan={7} className="px-6 py-10 text-center text-gray-400 italic">
+                  No payments found.
+                </td>
+              </tr>
+            ) : (
+              filtered.map((p: any) => (
+                <tr key={p.id} className="hover:bg-gray-50/50 transition-colors">
+                  <td className="px-6 py-4">
+                    <div className="font-bold text-gray-900">{p.brands?.company_name ?? '—'}</div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="text-sm text-gray-900">{p.packages?.name ?? '—'}</div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className="font-bold text-gray-900">${Number(p.amount).toLocaleString()}</span>
+                  </td>
+                  <td className="px-6 py-4 text-sm text-gray-500">
+                    {p.created_at ? new Date(p.created_at).toLocaleDateString() : '—'}
+                  </td>
+                  <td className="px-6 py-4">{statusBadge(p.status ?? 'pending')}</td>
+                  <td className="px-6 py-4">
+                    <div className="text-xs text-gray-500 font-mono truncate max-w-[240px]">
+                      {p.stripe_payment_intent_id ?? '—'}
+                    </div>
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>

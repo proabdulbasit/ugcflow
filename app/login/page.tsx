@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import Navbar from '@/components/Navbar';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -11,6 +11,8 @@ export default function Login() {
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
   const supabase = createClient();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const roleHint = searchParams.get('role');
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,7 +58,34 @@ export default function Login() {
       <div className="pt-32 pb-20 px-6 flex justify-center">
         <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 w-full max-w-md">
           <h1 className="text-3xl font-bold mb-2 text-center">Welcome Back</h1>
-          <p className="text-gray-600 mb-8 text-center">Enter your email to sign in to your dashboard.</p>
+          <p className="text-gray-600 mb-6 text-center">
+            {roleHint === 'brand'
+              ? 'Brand login'
+              : roleHint === 'creator'
+                ? 'Creator login'
+                : 'Sign in to your dashboard'}
+          </p>
+
+          <div className="grid grid-cols-2 gap-3 mb-6">
+            <button
+              type="button"
+              onClick={() => router.push('/login?role=brand')}
+              className={`py-2.5 rounded-xl font-bold text-sm transition-all ${
+                roleHint === 'brand' ? 'bg-indigo-600 text-white' : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              Brand
+            </button>
+            <button
+              type="button"
+              onClick={() => router.push('/login?role=creator')}
+              className={`py-2.5 rounded-xl font-bold text-sm transition-all ${
+                roleHint === 'creator' ? 'bg-indigo-600 text-white' : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              Creator
+            </button>
+          </div>
 
           <form onSubmit={handleLogin} className="space-y-4">
             <div>

@@ -89,7 +89,7 @@ export default function CreatorBrowse() {
                   <div className="text-indigo-600 text-sm font-medium">{campaign.brands?.company_name}</div>
                 </div>
                 <div className="bg-green-50 text-green-700 px-3 py-1 rounded-full text-xs font-bold">
-                  ${campaign.payout_amount || 150} / video
+                  $89 / video
                 </div>
               </div>
               

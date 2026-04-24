@@ -35,7 +35,7 @@ export async function POST(req: Request) {
     // 1. Get package details
     const { data: pkg, error: pkgError } = await supabase
       .from('packages')
-      .select('video_count, price')
+      .select('name, video_count, price')
       .eq('id', packageId)
       .single();
 
@@ -44,10 +44,17 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Package not found' }, { status: 404 });
     }
 
+    const creditsToAdd =
+      String(pkg.name || '').toLowerCase().includes('starter') ? 267 :
+      String(pkg.name || '').toLowerCase().includes('growth') ? 534 :
+      String(pkg.name || '').toLowerCase().includes('scale') ? 890 :
+      // fallback (old behavior)
+      Number(pkg.video_count) || 0;
+
     // 2. Update brand credits using the RPC function
     const { error: creditError } = await supabase.rpc('increment_brand_credits', {
       brand_id_input: brandId,
-      amount_input: pkg.video_count
+      amount_input: creditsToAdd
     });
 
     if (creditError) {

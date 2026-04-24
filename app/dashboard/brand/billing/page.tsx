@@ -4,43 +4,85 @@ import { LayoutDashboard, Video, CreditCard, Settings, Zap, CheckCircle2 } from 
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 export default function BrandBilling() {
   const [credits, setCredits] = useState(0);
   const [payments, setPayments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [reconciling, setReconciling] = useState(false);
+  const [reconcileMessage, setReconcileMessage] = useState<string | null>(null);
   const supabase = createClient();
+  const searchParams = useSearchParams();
+  const router = useRouter();
 
-  useEffect(() => {
-    const fetchBillingData = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+  const fetchBillingData = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
 
-      // Fetch credits
-      const { data: brand } = await supabase
-        .from('brands')
-        .select('credits')
-        .eq('id', user.id)
-        .single();
-      
-      if (brand) setCredits(brand.credits || 0);
+    // Fetch credits
+    const { data: brand } = await supabase
+      .from('brands')
+      .select('credits')
+      .eq('id', user.id)
+      .single();
 
-      // Fetch payment history
-      const { data: paymentsData } = await supabase
-        .from('payments')
-        .select(`
+    if (brand) setCredits(brand.credits || 0);
+
+    // Fetch payment history
+    const { data: paymentsData } = await supabase
+      .from('payments')
+      .select(`
           *,
           packages (name)
         `)
-        .eq('brand_id', user.id)
-        .order('created_at', { ascending: false });
+      .eq('brand_id', user.id)
+      .order('created_at', { ascending: false });
 
-      if (paymentsData) setPayments(paymentsData);
+    if (paymentsData) setPayments(paymentsData);
+  };
+
+  useEffect(() => {
+    const run = async () => {
+      setLoading(true);
+      await fetchBillingData();
       setLoading(false);
     };
-
-    fetchBillingData();
+    run();
   }, []);
+
+  useEffect(() => {
+    const sessionId = searchParams.get('session_id');
+    if (!sessionId) return;
+    if (reconciling) return;
+
+    const run = async () => {
+      setReconciling(true);
+      setReconcileMessage('Confirming your purchase…');
+      try {
+        const res = await fetch('/api/reconcile-checkout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sessionId }),
+        });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          setReconcileMessage(json?.error || 'Failed to confirm purchase.');
+        } else if (json?.alreadyProcessed) {
+          setReconcileMessage('Purchase already processed.');
+        } else if (json?.creditsAdded) {
+          setReconcileMessage(`Credits added: ${json.creditsAdded}`);
+        } else {
+          setReconcileMessage('Purchase confirmed.');
+        }
+      } finally {
+        router.replace('/dashboard/brand/billing');
+        await fetchBillingData();
+        setReconciling(false);
+      }
+    };
+    run();
+  }, [reconciling, router, searchParams]);
 
   const sidebarItems = [
     { label: 'Overview', icon: LayoutDashboard, href: '/dashboard/brand' },
@@ -61,7 +103,10 @@ export default function BrandBilling() {
           <div>
             <div className="text-indigo-100 text-sm font-medium mb-1">Available Credits</div>
             <div className="text-5xl font-extrabold mb-2">{loading ? '...' : credits}</div>
-            <p className="text-indigo-100 text-sm">1 credit = 1 high-quality UGC video</p>
+            <p className="text-indigo-100 text-sm">Creating a campaign costs 89 credits.</p>
+            {reconcileMessage ? (
+              <p className="text-indigo-100 text-xs mt-2">{reconcileMessage}</p>
+            ) : null}
           </div>
           <Link 
             href="/pricing" 
