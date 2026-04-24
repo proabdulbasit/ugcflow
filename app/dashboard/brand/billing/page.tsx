@@ -1,12 +1,12 @@
 'use client';
 import DashboardLayout from '@/components/DashboardLayout';
 import { LayoutDashboard, Video, CreditCard, Settings, Zap, CheckCircle2 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 
-export default function BrandBilling() {
+function BrandBillingInner() {
   const [credits, setCredits] = useState(0);
   const [payments, setPayments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -162,5 +162,13 @@ export default function BrandBilling() {
         </div>
       </div>
     </DashboardLayout>
+  );
+}
+
+export default function BrandBilling() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-gray-50" />}>
+      <BrandBillingInner />
+    </Suspense>
   );
 }

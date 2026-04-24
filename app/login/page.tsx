@@ -1,10 +1,10 @@
 'use client';
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import Navbar from '@/components/Navbar';
 import { useRouter, useSearchParams } from 'next/navigation';
 
-export default function Login() {
+function LoginInner() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -149,5 +149,13 @@ export default function Login() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function Login() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-gray-50" />}>
+      <LoginInner />
+    </Suspense>
   );
 }

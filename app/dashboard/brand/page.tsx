@@ -1,12 +1,12 @@
 'use client';
 import DashboardLayout from '@/components/DashboardLayout';
 import { LayoutDashboard, Video, CreditCard, Settings, Plus, Clock, CheckCircle2, ChevronRight } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 
-export default function BrandDashboard() {
+function BrandDashboardInner() {
   const [stats, setStats] = useState({ activeCampaigns: 0, credits: 0, pendingDeliverables: 0 });
   const [recentDeliverables, setRecentDeliverables] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -199,5 +199,13 @@ export default function BrandDashboard() {
         </div>
       </div>
     </DashboardLayout>
+  );
+}
+
+export default function BrandDashboard() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-gray-50" />}>
+      <BrandDashboardInner />
+    </Suspense>
   );
 }
