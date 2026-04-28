@@ -102,7 +102,7 @@ function BrandBillingInner() {
         <div className="md:col-span-2 bg-indigo-600 rounded-3xl p-8 text-white shadow-xl shadow-indigo-100 flex flex-col md:flex-row justify-between items-center gap-6">
           <div>
             <div className="text-indigo-100 text-sm font-medium mb-1">Available Credits</div>
-            <div className="text-5xl font-extrabold mb-2">{loading ? '...' : credits}</div>
+            <div className="text-4xl sm:text-5xl font-extrabold mb-2">{loading ? '...' : credits}</div>
             <p className="text-indigo-100 text-sm">Creating a campaign costs 89 credits.</p>
             {reconcileMessage ? (
               <p className="text-indigo-100 text-xs mt-2">{reconcileMessage}</p>

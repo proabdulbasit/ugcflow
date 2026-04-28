@@ -79,7 +79,8 @@ export default function AdminPaymentsPage() {
       </div>
 
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-        <table className="w-full text-left">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left min-w-[900px]">
           <thead>
             <tr className="bg-gray-50 text-gray-500 text-xs font-bold uppercase tracking-wider">
               <th className="px-6 py-4">Brand</th>
@@ -128,7 +129,8 @@ export default function AdminPaymentsPage() {
               ))
             )}
           </tbody>
-        </table>
+          </table>
+        </div>
       </div>
     </DashboardLayout>
   );

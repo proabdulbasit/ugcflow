@@ -10,24 +10,24 @@ export default function LandingPage() {
       <Navbar />
       
       {/* Hero Sections*/   }
-      <section className="pt-32 pb-20 px-6">
+      <section className="pt-24 sm:pt-32 pb-16 sm:pb-20 px-4 sm:px-6">
         <div className="max-w-7xl mx-auto text-center">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-indigo-50 text-indigo-600 text-sm font-medium mb-8">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-indigo-50 text-indigo-600 text-xs sm:text-sm font-medium mb-6 sm:mb-8">
             <Star size={16} className="fill-indigo-600" />
             <span>Trusted by 500+ E-commerce Brands</span>
           </div>
-          <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight text-gray-900 mb-6">
+          <h1 className="text-4xl sm:text-5xl md:text-7xl font-extrabold tracking-tight text-gray-900 mb-5 sm:mb-6">
             High-Converting <span className="text-indigo-600">UGC</span> <br />
             Done For You.
           </h1>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto mb-10">
+          <p className="text-base sm:text-xl text-gray-600 max-w-2xl mx-auto mb-8 sm:mb-10">
             Stop chasing creators. We handle the sourcing, briefing, and management so you get high-quality video ads that actually sell.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link href="/brand-apply" className="px-8 py-4 bg-indigo-600 text-white rounded-full font-bold text-lg hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200">
+            <Link href="/brand-apply" className="px-7 sm:px-8 py-3.5 sm:py-4 bg-indigo-600 text-white rounded-full font-bold text-base sm:text-lg hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200">
               Get Started Now
             </Link>
-            <Link href="/how-it-works" className="px-8 py-4 bg-white text-gray-900 border border-gray-200 rounded-full font-bold text-lg hover:bg-gray-50 transition-all">
+            <Link href="/how-it-works" className="px-7 sm:px-8 py-3.5 sm:py-4 bg-white text-gray-900 border border-gray-200 rounded-full font-bold text-base sm:text-lg hover:bg-gray-50 transition-all">
               See How It Works
             </Link>
           </div>
@@ -35,23 +35,23 @@ export default function LandingPage() {
       </section>
 
       {/* Social Proof / Stats */}
-      <section className="py-12 border-y border-gray-100 bg-gray-50/50">
-        <div className="max-w-7xl mx-auto px-6">
+      <section className="py-10 sm:py-12 border-y border-gray-100 bg-gray-50/50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
             <div>
-              <div className="text-3xl font-bold text-gray-900">2,000+</div>
+              <div className="text-2xl sm:text-3xl font-bold text-gray-900">2,000+</div>
               <div className="text-sm text-gray-500">Videos Delivered</div>
             </div>
             <div>
-              <div className="text-3xl font-bold text-gray-900">150+</div>
+              <div className="text-2xl sm:text-3xl font-bold text-gray-900">150+</div>
               <div className="text-sm text-gray-500">Vetted Creators</div>
             </div>
             <div>
-              <div className="text-3xl font-bold text-gray-900">4.9/5</div>
+              <div className="text-2xl sm:text-3xl font-bold text-gray-900">4.9/5</div>
               <div className="text-sm text-gray-500">Average Rating</div>
             </div>
             <div>
-              <div className="text-3xl font-bold text-gray-900">7 Days</div>
+              <div className="text-2xl sm:text-3xl font-bold text-gray-900">7 Days</div>
               <div className="text-sm text-gray-500">Avg. Turnaround</div>
             </div>
           </div>
@@ -59,7 +59,7 @@ export default function LandingPage() {
       </section>
 
       {/* Features */}
-      <section className="py-24 px-6">
+      <section className="py-16 sm:py-24 px-4 sm:px-6">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">Why Brands Choose UGCFlow</h2>
@@ -96,11 +96,11 @@ export default function LandingPage() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 px-6 bg-indigo-900 text-white rounded-[3rem] mx-6 mb-20">
+      <section className="py-14 sm:py-20 px-4 sm:px-6 bg-indigo-900 text-white rounded-[2rem] sm:rounded-[3rem] mx-4 sm:mx-6 mb-16 sm:mb-20">
         <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-4xl font-bold mb-6">Ready to scale your creative?</h2>
-          <p className="text-indigo-100 text-xl mb-10">Join the top brands using UGCFlow to dominate TikTok, Reels, and Shorts.</p>
-          <Link href="/brand-apply" className="px-10 py-5 bg-white text-indigo-900 rounded-full font-bold text-lg hover:bg-indigo-50 transition-all inline-block">
+          <h2 className="text-2xl sm:text-4xl font-bold mb-4 sm:mb-6">Ready to scale your creative?</h2>
+          <p className="text-indigo-100 text-base sm:text-xl mb-8 sm:mb-10">Join the top brands using UGCFlow to dominate TikTok, Reels, and Shorts.</p>
+          <Link href="/brand-apply" className="px-8 sm:px-10 py-4 sm:py-5 bg-white text-indigo-900 rounded-full font-bold text-base sm:text-lg hover:bg-indigo-50 transition-all inline-block">
             Apply as a Brand
           </Link>
         </div>
