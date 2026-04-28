@@ -48,7 +48,7 @@ export async function updateSession(request: NextRequest) {
 
   // Role-based protection for dashboards.
   // (We keep the UI redirects server-side so users can't just hit admin routes directly.)
-  if (user && request.nextUrl.pathname.startsWith('/dashboard/')) {
+  if (user && request.nextUrl.pathname.startsWith('/dashboard')) {
     try {
       const { data: profile } = await supabase
         .from('profiles')
@@ -56,8 +56,17 @@ export async function updateSession(request: NextRequest) {
         .eq('id', (user as any).id)
         .single()
 
-      const role = (profile as any)?.role as string | undefined
+      const role =
+        ((profile as any)?.role as string | undefined) ??
+        (((user as any)?.user_metadata?.role as string | undefined) ? String((user as any).user_metadata.role) : undefined)
       const path = request.nextUrl.pathname
+
+      // Canonical entrypoint: /dashboard always redirects to the user's real role dashboard.
+      if (path === '/dashboard') {
+        const url = request.nextUrl.clone()
+        url.pathname = role ? `/dashboard/${role}` : '/dashboard/creator'
+        return NextResponse.redirect(url)
+      }
 
       if (role === 'admin') {
         // Admins can access all dashboards.

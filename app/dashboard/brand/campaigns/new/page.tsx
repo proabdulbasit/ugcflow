@@ -10,7 +10,6 @@ export default function NewCampaign() {
   const [loading, setLoading] = useState(false);
   const [title, setTitle] = useState('');
   const [brief, setBrief] = useState('');
-  const fixedPayout = 89;
   const campaignCostCredits = 89;
   const supabase = createClient();
   const router = useRouter();
@@ -49,7 +48,6 @@ export default function NewCampaign() {
       brand_id: user.id,
       title,
       brief,
-      payout_amount: fixedPayout,
       status: 'active'
     });
 
@@ -105,12 +103,6 @@ export default function NewCampaign() {
                 className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none h-48"
                 placeholder="Describe what you're looking for, key talking points, and any specific requirements..."
               ></textarea>
-            </div>
-
-            <div className="bg-gray-50 border border-gray-100 rounded-2xl p-5">
-              <div className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">Creator payout</div>
-              <div className="text-lg font-black text-gray-900">${fixedPayout} / video</div>
-              <div className="text-xs text-gray-500 mt-1">This is fixed platform-wide.</div>
             </div>
 
             <div className="bg-gray-50 border border-gray-100 rounded-2xl p-5">

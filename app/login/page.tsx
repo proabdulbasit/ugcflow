@@ -35,17 +35,31 @@ function LoginInner() {
       }
 
       if (data.user) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', data.user.id)
-          .single();
+        // Optional UX: if user picked a role tab, ensure the account matches.
+        // (Role is determined at signup; the tab shouldn't silently log you into the "other" dashboard.)
+        if (roleHint === 'brand' || roleHint === 'creator') {
+          const { data: profile, error: profileError } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', data.user.id)
+            .single();
 
-        if (profile?.role) {
-          router.push(`/dashboard/${profile.role}`);
-        } else {
-          router.push('/');
+          const actualRole =
+            ((profile as any)?.role as string | undefined) ??
+            ((data.user as any)?.user_metadata?.role as string | undefined)
+
+          if (actualRole && actualRole !== roleHint) {
+            await supabase.auth.signOut();
+            setMessage({
+              type: 'error',
+              text: `This account is a ${actualRole} account. Please use the ${actualRole} login.`,
+            });
+            return;
+          }
         }
+
+        // Always route via /dashboard; it server-redirects to the correct role.
+        router.push('/dashboard');
       }
     } finally {
       setLoading(false);

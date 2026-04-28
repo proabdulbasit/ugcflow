@@ -7,6 +7,7 @@ export default function Navbar() {
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
   const supabase = useMemo(() => createClient(), []);
+  const [profileLoading, setProfileLoading] = useState(false);
 
   useEffect(() => {
     if (!supabase) return;
@@ -15,12 +16,14 @@ export default function Navbar() {
       setUser(user);
       
       if (user) {
+        setProfileLoading(true);
         const { data: profileData } = await supabase
           .from('profiles')
           .select('role')
           .eq('id', user.id)
           .single();
         setProfile(profileData);
+        setProfileLoading(false);
       }
     };
     fetchUser();
@@ -44,8 +47,8 @@ export default function Navbar() {
           {user ? (
             profile?.role === 'admin' ? null : (
               <Link
-                href={`/dashboard/${profile?.role || 'brand'}`}
-                className="px-6 py-2.5 bg-indigo-600 text-white rounded-full font-bold text-sm hover:bg-indigo-700 transition-all"
+                href="/dashboard"
+                className={`px-6 py-2.5 bg-indigo-600 text-white rounded-full font-bold text-sm hover:bg-indigo-700 transition-all ${profileLoading ? 'opacity-80' : ''}`}
               >
                 Dashboard
               </Link>
