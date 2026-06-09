@@ -17,12 +17,8 @@ const PORT = Number(process.env.PORT) || 4000;
 const MONGODB_URI = process.env.MONGODB_URI;
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 
-if (!MONGODB_URI) {
-  console.error('MONGODB_URI is required');
-  process.exit(1);
-}
-
 const app = express();
+let dbReady = false;
 
 app.use(
   cors({
@@ -33,7 +29,12 @@ app.use(
 app.use(express.json());
 app.use(cookieParser());
 
-app.get('/health', (_req, res) => res.json({ ok: true }));
+app.get('/health', (_req, res) => {
+  if (!dbReady) {
+    return res.status(503).json({ ok: false, db: 'connecting' });
+  }
+  res.json({ ok: true });
+});
 
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
@@ -46,10 +47,22 @@ app.use('/api/payments', paymentRoutes);
 app.use('/api/admin', adminRoutes);
 
 async function start() {
-  await connectDb(MONGODB_URI!);
-  app.listen(PORT, () => {
-    console.log(`UGCFlow API running on http://localhost:${PORT}`);
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`UGCFlow API listening on 0.0.0.0:${PORT}`);
   });
+
+  if (!MONGODB_URI) {
+    console.error('MONGODB_URI is required — set it in Render environment variables');
+    return;
+  }
+
+  try {
+    await connectDb(MONGODB_URI);
+    dbReady = true;
+  } catch (err) {
+    console.error('Failed to connect to MongoDB:', err);
+    process.exit(1);
+  }
 }
 
 start().catch((err) => {

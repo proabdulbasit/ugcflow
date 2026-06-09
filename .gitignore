@@ -19,6 +19,7 @@
 
 # production
 /build
+backend/dist
 
 # turbopack / turbo
 .turbo
