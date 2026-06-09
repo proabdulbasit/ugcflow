@@ -37,6 +37,7 @@ yarn-error.log*
 
 # cache
 .eslintcache
+.pnpm-store
 
 # env files (never commit secrets)
 .env*
