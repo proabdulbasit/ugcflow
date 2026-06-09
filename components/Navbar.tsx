@@ -1,30 +1,24 @@
 'use client';
 import Link from 'next/link';
-import { useMemo, useState, useEffect } from 'react';
-import { createClient } from '@/lib/supabase/client';
+import { useState, useEffect } from 'react';
 import { Menu, X } from 'lucide-react';
+import { getMe } from '@/lib/api/auth';
+import type { ApiUser } from '@/lib/api/client';
 
 export default function Navbar() {
-  const [user, setUser] = useState<any>(null);
-  const [profile, setProfile] = useState<any>(null);
-  const supabase = useMemo(() => createClient(), []);
+  const [user, setUser] = useState<ApiUser | null>(null);
   const [profileLoading, setProfileLoading] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => {
-    if (!supabase) return;
     const fetchUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      setUser(user);
-      
-      if (user) {
+      try {
         setProfileLoading(true);
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', user.id)
-          .single();
-        setProfile(profileData);
+        const { user: me } = await getMe();
+        setUser(me);
+      } catch {
+        setUser(null);
+      } finally {
         setProfileLoading(false);
       }
     };
@@ -47,7 +41,14 @@ export default function Navbar() {
 
         <div className="hidden md:flex items-center gap-4">
           {user ? (
-            profile?.role === 'admin' ? null : (
+            user.role === 'admin' ? (
+              <Link
+                href="/dashboard/admin"
+                className="px-6 py-2.5 bg-indigo-600 text-white rounded-full font-bold text-sm hover:bg-indigo-700 transition-all"
+              >
+                Admin Panel
+              </Link>
+            ) : (
               <Link
                 href="/dashboard"
                 className={`px-6 py-2.5 bg-indigo-600 text-white rounded-full font-bold text-sm hover:bg-indigo-700 transition-all ${profileLoading ? 'opacity-80' : ''}`}
@@ -57,21 +58,9 @@ export default function Navbar() {
             )
           ) : (
             <>
-              <Link
-                href="/login?role=brand"
-                className="text-sm font-bold text-gray-600 hover:text-indigo-600 transition-colors"
-              >
-                Brand Login
-              </Link>
-              <Link
-                href="/login?role=creator"
-                className="text-sm font-bold text-gray-600 hover:text-indigo-600 transition-colors"
-              >
-                Creator Login
-              </Link>
-              <Link href="/brand-apply" className="px-6 py-2.5 bg-indigo-600 text-white rounded-full font-bold text-sm hover:bg-indigo-700 transition-all">
-                Get Started
-              </Link>
+              <Link href="/login?role=brand" className="text-sm font-bold text-gray-600 hover:text-indigo-600 transition-colors">Brand Login</Link>
+              <Link href="/login?role=creator" className="text-sm font-bold text-gray-600 hover:text-indigo-600 transition-colors">Creator Login</Link>
+              <Link href="/brand-apply" className="px-6 py-2.5 bg-indigo-600 text-white rounded-full font-bold text-sm hover:bg-indigo-700 transition-all">Get Started</Link>
             </>
           )}
         </div>
@@ -90,41 +79,22 @@ export default function Navbar() {
       {mobileOpen && (
         <div className="md:hidden border-t border-gray-100 bg-white/95 backdrop-blur-md">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 space-y-2">
-            <Link onClick={() => setMobileOpen(false)} href="/how-it-works" className="block px-3 py-2 rounded-xl font-semibold text-gray-700 hover:bg-gray-50">
-              How it Works
-            </Link>
-            <Link onClick={() => setMobileOpen(false)} href="/pricing" className="block px-3 py-2 rounded-xl font-semibold text-gray-700 hover:bg-gray-50">
-              Pricing
-            </Link>
-            <Link onClick={() => setMobileOpen(false)} href="/brand-apply" className="block px-3 py-2 rounded-xl font-semibold text-gray-700 hover:bg-gray-50">
-              Brands
-            </Link>
-            <Link onClick={() => setMobileOpen(false)} href="/creator-apply" className="block px-3 py-2 rounded-xl font-semibold text-gray-700 hover:bg-gray-50">
-              Creators
-            </Link>
-
+            <Link onClick={() => setMobileOpen(false)} href="/how-it-works" className="block px-3 py-2 rounded-xl font-semibold text-gray-700 hover:bg-gray-50">How it Works</Link>
+            <Link onClick={() => setMobileOpen(false)} href="/pricing" className="block px-3 py-2 rounded-xl font-semibold text-gray-700 hover:bg-gray-50">Pricing</Link>
+            <Link onClick={() => setMobileOpen(false)} href="/brand-apply" className="block px-3 py-2 rounded-xl font-semibold text-gray-700 hover:bg-gray-50">Brands</Link>
+            <Link onClick={() => setMobileOpen(false)} href="/creator-apply" className="block px-3 py-2 rounded-xl font-semibold text-gray-700 hover:bg-gray-50">Creators</Link>
             <div className="pt-2 border-t border-gray-100 flex flex-col gap-2">
               {user ? (
-                profile?.role === 'admin' ? null : (
-                  <Link
-                    onClick={() => setMobileOpen(false)}
-                    href="/dashboard"
-                    className="w-full text-center px-4 py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition"
-                  >
-                    Dashboard
-                  </Link>
+                user.role === 'admin' ? (
+                  <Link onClick={() => setMobileOpen(false)} href="/dashboard/admin" className="w-full text-center px-4 py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition">Admin Panel</Link>
+                ) : (
+                  <Link onClick={() => setMobileOpen(false)} href="/dashboard" className="w-full text-center px-4 py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition">Dashboard</Link>
                 )
               ) : (
                 <>
-                  <Link onClick={() => setMobileOpen(false)} href="/login?role=brand" className="w-full text-center px-4 py-3 rounded-xl font-bold border border-gray-200 text-gray-700 hover:bg-gray-50 transition">
-                    Brand Login
-                  </Link>
-                  <Link onClick={() => setMobileOpen(false)} href="/login?role=creator" className="w-full text-center px-4 py-3 rounded-xl font-bold border border-gray-200 text-gray-700 hover:bg-gray-50 transition">
-                    Creator Login
-                  </Link>
-                  <Link onClick={() => setMobileOpen(false)} href="/brand-apply" className="w-full text-center px-4 py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition">
-                    Get Started
-                  </Link>
+                  <Link onClick={() => setMobileOpen(false)} href="/login?role=brand" className="w-full text-center px-4 py-3 rounded-xl font-bold border border-gray-200 text-gray-700 hover:bg-gray-50 transition">Brand Login</Link>
+                  <Link onClick={() => setMobileOpen(false)} href="/login?role=creator" className="w-full text-center px-4 py-3 rounded-xl font-bold border border-gray-200 text-gray-700 hover:bg-gray-50 transition">Creator Login</Link>
+                  <Link onClick={() => setMobileOpen(false)} href="/brand-apply" className="w-full text-center px-4 py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition">Get Started</Link>
                 </>
               )}
             </div>

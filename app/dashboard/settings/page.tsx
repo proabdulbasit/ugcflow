@@ -1,32 +1,47 @@
 'use client';
 import DashboardLayout from '@/components/DashboardLayout';
-import { LayoutDashboard, Video, CreditCard, Settings, User, Globe, Briefcase, Save, Search, DollarSign } from 'lucide-react';
+import { User, Globe, Briefcase, Save } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { createClient } from '@/lib/supabase/client';
+import { getMe, updateProfile } from '@/lib/api/auth';
+import { ApiError } from '@/lib/api/client';
+import { toast } from '@/lib/toast';
 
 export default function SettingsPage() {
   const [profile, setProfile] = useState<any>(null);
   const [roleData, setRoleData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const supabase = createClient();
 
   useEffect(() => {
     const fetchData = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data: profileData } = await supabase.from('profiles').select('*').eq('id', user.id).single();
-      setProfile(profileData);
-
-      if (profileData?.role === 'creator') {
-        const { data } = await supabase.from('creators').select('*').eq('id', user.id).single();
-        setRoleData(data);
-      } else if (profileData?.role === 'brand') {
-        const { data } = await supabase.from('brands').select('*').eq('id', user.id).single();
-        setRoleData(data);
+      try {
+        const { user, roleData: rd } = await getMe();
+        setProfile({
+          id: user.id,
+          email: user.email,
+          full_name: user.fullName,
+          role: user.role,
+        });
+        if (rd) {
+          if (user.role === 'creator') {
+            setRoleData({
+              portfolio_url: rd.portfolioUrl,
+              bio: rd.bio,
+            });
+          } else if (user.role === 'brand') {
+            setRoleData({
+              company_name: rd.companyName,
+              website_url: rd.websiteUrl,
+            });
+          }
+        } else {
+          setRoleData({});
+        }
+      } catch (err) {
+        if (err instanceof ApiError) console.error(err.message);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
     fetchData();
   }, []);
@@ -34,54 +49,35 @@ export default function SettingsPage() {
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
-    
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
 
-    // Update Profile
-    await supabase.from('profiles').update({ full_name: profile.full_name }).eq('id', user.id);
+    try {
+      const payload: Record<string, unknown> = {
+        fullName: profile.full_name,
+      };
 
-    // Update Role Specific Data
-    if (profile.role === 'creator') {
-      await supabase.from('creators').update({
-        portfolio_url: roleData.portfolio_url,
-        bio: roleData.bio
-      }).eq('id', user.id);
-    } else if (profile.role === 'brand') {
-      await supabase.from('brands').update({
-        company_name: roleData.company_name,
-        website_url: roleData.website_url
-      }).eq('id', user.id);
+      if (profile.role === 'creator') {
+        payload.portfolioUrl = roleData.portfolio_url;
+        payload.bio = roleData.bio;
+      } else if (profile.role === 'brand') {
+        payload.companyName = roleData.company_name;
+        payload.websiteUrl = roleData.website_url;
+      }
+
+      await updateProfile(payload);
+      toast.success('Settings saved successfully!');
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Failed to save settings');
+    } finally {
+      setSaving(false);
     }
-
-    setSaving(false);
-    alert('Settings saved successfully!');
   };
 
-  if (loading) return <div className="p-8 text-center">Loading...</div>;
+  if (loading || !profile) return <div className="p-8 text-center">Loading...</div>;
 
-  const sidebarItems = profile.role === 'admin' ? [
-    { label: 'Overview', icon: LayoutDashboard, href: '/dashboard/admin' },
-    { label: 'Creators', icon: User, href: '/dashboard/admin/creators' },
-    { label: 'Brands', icon: User, href: '/dashboard/admin/brands' },
-    { label: 'Campaigns', icon: Video, href: '/dashboard/admin/campaigns' },
-    { label: 'Payments', icon: CreditCard, href: '/dashboard/admin/payments' },
-    { label: 'Settings', icon: Settings, href: '/dashboard/settings' },
-  ] : profile.role === 'brand' ? [
-    { label: 'Overview', icon: LayoutDashboard, href: '/dashboard/brand' },
-    { label: 'My Campaigns', icon: Video, href: '/dashboard/brand/campaigns' },
-    { label: 'Billing', icon: CreditCard, href: '/dashboard/brand/billing' },
-    { label: 'Settings', icon: Settings, href: '/dashboard/settings' },
-  ] : [
-    { label: 'Overview', icon: LayoutDashboard, href: '/dashboard/creator' },
-    { label: 'Browse Jobs', icon: Search, href: '/dashboard/creator/browse' },
-    { label: 'My Assignments', icon: Video, href: '/dashboard/creator/assignments' },
-    { label: 'Earnings', icon: DollarSign, href: '/dashboard/creator/earnings' },
-    { label: 'Settings', icon: Settings, href: '/dashboard/settings' },
-  ];
+  const navRole = profile.role as 'admin' | 'brand' | 'creator';
 
   return (
-    <DashboardLayout role={profile.role.charAt(0).toUpperCase() + profile.role.slice(1)} items={sidebarItems}>
+    <DashboardLayout role={profile.role.charAt(0).toUpperCase() + profile.role.slice(1)} navRole={navRole}>
       <div className="max-w-2xl mx-auto">
         <h1 className="text-2xl font-bold text-gray-900 mb-8">Account Settings</h1>
 
@@ -119,7 +115,7 @@ export default function SettingsPage() {
                     <label className="block text-sm font-medium text-gray-700 mb-1">Company Name</label>
                     <input 
                       type="text" 
-                      value={roleData.company_name || ''} 
+                      value={roleData?.company_name || ''} 
                       onChange={(e) => setRoleData({...roleData, company_name: e.target.value})}
                       className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
                     />
@@ -128,7 +124,7 @@ export default function SettingsPage() {
                     <label className="block text-sm font-medium text-gray-700 mb-1">Website URL</label>
                     <input 
                       type="url" 
-                      value={roleData.website_url || ''} 
+                      value={roleData?.website_url || ''} 
                       onChange={(e) => setRoleData({...roleData, website_url: e.target.value})}
                       className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
                     />
@@ -140,7 +136,7 @@ export default function SettingsPage() {
                     <label className="block text-sm font-medium text-gray-700 mb-1">Portfolio URL</label>
                     <input 
                       type="url" 
-                      value={roleData.portfolio_url || ''} 
+                      value={roleData?.portfolio_url || ''} 
                       onChange={(e) => setRoleData({...roleData, portfolio_url: e.target.value})}
                       className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
                     />
@@ -148,7 +144,7 @@ export default function SettingsPage() {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Bio</label>
                     <textarea 
-                      value={roleData.bio || ''} 
+                      value={roleData?.bio || ''} 
                       onChange={(e) => setRoleData({...roleData, bio: e.target.value})}
                       className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none h-32"
                     />
@@ -161,7 +157,7 @@ export default function SettingsPage() {
           <button 
             disabled={saving}
             type="submit"
-            className="w-full py-4 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-all flex并发 flex items-center justify-center gap-2 shadow-lg shadow-indigo-100"
+            className="w-full py-4 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-indigo-100"
           >
             {saving ? 'Saving...' : <><Save size={18} /> Save Changes</>}
           </button>

@@ -1,58 +1,38 @@
 'use client';
 import DashboardLayout from '@/components/DashboardLayout';
-import { LayoutDashboard, Video, Search, DollarSign, ChevronRight, Clock, CheckCircle2, AlertCircle } from 'lucide-react';
+import { LayoutDashboard, Video, Search, DollarSign, ChevronRight } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { createClient } from '@/lib/supabase/client';
+import { getCreatorAssignments } from '@/lib/api';
+import { ApiError } from '@/lib/api/client';
 import Link from 'next/link';
 
 export default function CreatorAssignments() {
   const [assignments, setAssignments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const supabase = createClient();
 
   useEffect(() => {
     const fetchAssignments = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      // Fetch campaigns where the creator is assigned
-      const { data } = await supabase
-        .from('campaign_creators')
-        .select(`
-          campaign_id,
-          campaigns (
-            id,
-            title,
-            payout_amount,
-            brands (company_name)
-          )
-        `)
-        .eq('creator_id', user.id);
-
-      // Fetch deliverables for these campaigns to show status
-      const { data: deliverables } = await supabase
-        .from('deliverables')
-        .select('campaign_id, status')
-        .eq('creator_id', user.id);
-
-      if (data) {
-        const formatted = data.map((item: any) => ({
-          ...item.campaigns,
-          deliverableStatus: deliverables?.find((d: any) => d.campaign_id === item.campaign_id)?.status || 'not_started'
-        }));
+      try {
+        const { assignments: data } = await getCreatorAssignments();
+        const formatted = data.map((item: any) => {
+          const c = item.campaign;
+          return {
+            id: c?.id ?? c?._id?.toString() ?? item.campaignId,
+            title: c?.title,
+            payout_amount: c?.payoutAmount ?? c?.payout_amount,
+            brands: c?.brands ?? (c?.brand ? { company_name: c.brand.companyName } : null),
+            deliverableStatus: item.deliverable?.status ?? 'not_started',
+          };
+        });
         setAssignments(formatted);
+      } catch (err) {
+        if (err instanceof ApiError) console.error(err.message);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
     fetchAssignments();
   }, []);
-
-  const sidebarItems = [
-    { label: 'Overview', icon: LayoutDashboard, href: '/dashboard/creator' },
-    { label: 'Browse Jobs', icon: Search, href: '/dashboard/creator/browse' },
-    { label: 'My Assignments', icon: Video, href: '/dashboard/creator/assignments' },
-    { label: 'Earnings', icon: DollarSign, href: '/dashboard/creator/earnings' },
-  ];
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -64,7 +44,7 @@ export default function CreatorAssignments() {
   };
 
   return (
-    <DashboardLayout role="Creator" items={sidebarItems}>
+    <DashboardLayout role="Creator" navRole="creator">
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-900">My Assignments</h1>
         <p className="text-gray-500 text-sm">Track your active projects and upload deliverables.</p>

@@ -1,105 +1,78 @@
 'use client';
 
 import DashboardLayout from '@/components/DashboardLayout';
-import { createClient } from '@/lib/supabase/client';
+import CampaignBriefDetails from '@/components/CampaignBriefDetails';
+import { getCreatorAssignment, submitDeliverable } from '@/lib/api';
+import { ApiError } from '@/lib/api/client';
+import { toast } from '@/lib/toast';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, CheckCircle2, Clock, DollarSign, LayoutDashboard, Search, Video, XCircle } from 'lucide-react';
-
-type Campaign = any;
-type DeliverableRow = any;
+import { useCallback, useEffect, useState } from 'react';
+import { ArrowLeft, CheckCircle2, Clock, ExternalLink, Upload, XCircle } from 'lucide-react';
 
 export default function CreatorAssignmentDetailPage() {
   const params = useParams<{ id: string }>();
   const id = params?.id;
 
-  const supabase = useMemo(() => createClient(), []);
   const [loading, setLoading] = useState(true);
-  const [campaign, setCampaign] = useState<Campaign | null>(null);
-  const [deliverable, setDeliverable] = useState<DeliverableRow | null>(null);
-
-  const sidebarItems = [
-    { label: 'Overview', icon: LayoutDashboard, href: '/dashboard/creator' },
-    { label: 'Browse Jobs', icon: Search, href: '/dashboard/creator/browse' },
-    { label: 'My Assignments', icon: Video, href: '/dashboard/creator/assignments' },
-    { label: 'Earnings', icon: DollarSign, href: '/dashboard/creator/earnings' },
-  ];
+  const [submitting, setSubmitting] = useState(false);
+  const [campaign, setCampaign] = useState<any>(null);
+  const [deliverable, setDeliverable] = useState<any>(null);
+  const [fileUrl, setFileUrl] = useState('');
 
   const fetchData = useCallback(async () => {
-    if (!supabase) return;
     if (!id) return;
     setLoading(true);
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
+    try {
+      const data = await getCreatorAssignment(id);
+      const c = data.campaign;
+      setCampaign(
+        c
+          ? {
+              ...c,
+              id: c.id ?? c._id?.toString(),
+              payout_amount: c.payout_amount ?? c.payoutAmount,
+            }
+          : null
+      );
+      setDeliverable(data.deliverable ?? null);
+      if (data.deliverable?.fileUrl) setFileUrl(data.deliverable.fileUrl);
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Failed to load assignment');
+    } finally {
       setLoading(false);
+    }
+  }, [id]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!id || !fileUrl.trim()) {
+      toast.error('Please enter a video or file URL');
       return;
     }
 
-    const [{ data: campaignData, error: campaignError }, { data: deliverableData, error: deliverableError }] =
-      await Promise.all([
-        supabase.from('campaigns').select('*, brands(company_name)').eq('id', id).single(),
-        supabase
-          .from('deliverables')
-          .select('*')
-          .eq('campaign_id', id)
-          .eq('creator_id', user.id)
-          .maybeSingle(),
-      ]);
+    setSubmitting(true);
+    try {
+      await submitDeliverable(id, fileUrl.trim());
+      toast.success('Deliverable submitted for review');
+      fetchData();
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Submission failed');
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
-    if (campaignError) alert(campaignError.message);
-    setCampaign(campaignData ?? null);
-
-    if (deliverableError) alert(deliverableError.message);
-    setDeliverable(deliverableData ?? null);
-
-    setLoading(false);
-  }, [id, supabase]);
-
-  useEffect(() => {
-    if (!supabase) return;
-    fetchData();
-  }, [fetchData, supabase]);
-
+  const canSubmit = !deliverable || deliverable.status === 'rejected';
   const status = deliverable?.status ?? 'not_started';
-  const statusBadge =
-    status === 'approved' ? (
-      <span className="inline-flex items-center gap-1 bg-green-50 text-green-600 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase">
-        <CheckCircle2 size={14} /> Approved
-      </span>
-    ) : status === 'pending' ? (
-      <span className="inline-flex items-center gap-1 bg-orange-50 text-orange-600 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase">
-        <Clock size={14} /> Pending Review
-      </span>
-    ) : status === 'rejected' ? (
-      <span className="inline-flex items-center gap-1 bg-red-50 text-red-600 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase">
-        <XCircle size={14} /> Revision Requested
-      </span>
-    ) : (
-      <span className="inline-flex items-center gap-1 bg-gray-50 text-gray-500 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase">
-        Not Started
-      </span>
-    );
-
-  if (!supabase) {
-    return (
-      <DashboardLayout role="Creator" items={sidebarItems}>
-        <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
-          <div className="text-gray-900 font-bold mb-1">Missing Supabase env</div>
-          <div className="text-sm text-gray-500">
-            Set <code className="font-mono">NEXT_PUBLIC_SUPABASE_URL</code> and{' '}
-            <code className="font-mono">NEXT_PUBLIC_SUPABASE_ANON_KEY</code> to use this page.
-          </div>
-        </div>
-      </DashboardLayout>
-    );
-  }
 
   return (
-    <DashboardLayout role="Creator" items={sidebarItems}>
+    <DashboardLayout role="Creator" navRole="creator">
       <div className="mb-6">
         <Link
           href="/dashboard/creator/assignments"
@@ -118,32 +91,86 @@ export default function CreatorAssignmentDetailPage() {
         ) : (
           <>
             <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-6">
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">{campaign.title}</h1>
-                <div className="text-sm text-indigo-600 font-medium mt-1">{campaign.brands?.company_name ?? '—'}</div>
-                <div className="text-xs text-gray-400 font-bold uppercase tracking-wider mt-2">
-                  Payout: <span className="text-gray-900">${campaign.payout_amount ?? '—'}</span>
-                </div>
+              <div className="text-sm text-gray-500">
+                Brand: <span className="font-medium text-gray-700">{campaign.brands?.company_name ?? '—'}</span>
+                <span className="mx-2">·</span>
+                Payout: <span className="font-medium text-gray-900">${campaign.payout_amount ?? campaign.payoutAmount ?? 89}</span>
               </div>
-              <div>{statusBadge}</div>
+              <div>
+                {status === 'approved' ? (
+                  <span className="inline-flex items-center gap-1 bg-green-50 text-green-600 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase">
+                    <CheckCircle2 size={14} /> Approved
+                  </span>
+                ) : status === 'pending' ? (
+                  <span className="inline-flex items-center gap-1 bg-orange-50 text-orange-600 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase">
+                    <Clock size={14} /> Pending Review
+                  </span>
+                ) : status === 'rejected' ? (
+                  <span className="inline-flex items-center gap-1 bg-red-50 text-red-600 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase">
+                    <XCircle size={14} /> Revision Requested
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 bg-gray-50 text-gray-500 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase">
+                    Not Started
+                  </span>
+                )}
+              </div>
             </div>
 
+            <CampaignBriefDetails campaign={campaign} showTitle />
+
+            {deliverable?.feedback ? (
+              <div className="mb-6 p-4 rounded-xl bg-red-50 border border-red-100">
+                <div className="text-xs font-bold uppercase text-red-700 mb-1">Brand feedback</div>
+                <p className="text-sm text-red-800 whitespace-pre-wrap">{deliverable.feedback}</p>
+              </div>
+            ) : null}
+
             <div className="border-t border-gray-100 pt-6">
-              <h2 className="text-sm font-bold text-gray-900 mb-2">Deliverable</h2>
-              {deliverable ? (
-                <div className="text-sm text-gray-600">
-                  Status: <span className="font-medium text-gray-900">{deliverable.status}</span>
-                  {deliverable.feedback ? (
-                    <div className="mt-2 p-3 rounded-xl bg-gray-50 text-gray-700 whitespace-pre-wrap">
-                      {deliverable.feedback}
-                    </div>
-                  ) : null}
+              <h2 className="text-sm font-bold text-gray-900 mb-3">Submit deliverable</h2>
+              <p className="text-sm text-gray-500 mb-4">
+                Paste a link to your video (Google Drive, Dropbox, Vimeo, etc.).
+              </p>
+
+              {deliverable?.fileUrl && status !== 'rejected' ? (
+                <div className="mb-4 p-4 rounded-xl bg-gray-50 border border-gray-100">
+                  <div className="text-xs font-bold uppercase text-gray-500 mb-1">Submitted link</div>
+                  <a
+                    href={deliverable.fileUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 text-indigo-600 font-medium text-sm hover:underline break-all"
+                  >
+                    {deliverable.fileUrl}
+                    <ExternalLink size={14} />
+                  </a>
                 </div>
-              ) : (
-                <div className="text-sm text-gray-500">
-                  You haven’t submitted anything yet. (Deliverable submission UI can be added here.)
-                </div>
-              )}
+              ) : null}
+
+              {canSubmit ? (
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <input
+                    type="url"
+                    required
+                    value={fileUrl}
+                    onChange={(e) => setFileUrl(e.target.value)}
+                    placeholder="https://drive.google.com/..."
+                    className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
+                  />
+                  <button
+                    type="submit"
+                    disabled={submitting}
+                    className="inline-flex items-center gap-2 px-5 py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 disabled:opacity-50"
+                  >
+                    <Upload size={18} />
+                    {submitting ? 'Submitting...' : deliverable?.status === 'rejected' ? 'Resubmit' : 'Submit for review'}
+                  </button>
+                </form>
+              ) : status === 'pending' ? (
+                <p className="text-sm text-gray-500">Your submission is awaiting brand review.</p>
+              ) : status === 'approved' ? (
+                <p className="text-sm text-green-600 font-medium">This deliverable has been approved. Great work!</p>
+              ) : null}
             </div>
           </>
         )}

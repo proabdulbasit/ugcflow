@@ -2,48 +2,43 @@
 import DashboardLayout from '@/components/DashboardLayout';
 import { LayoutDashboard, Video, CreditCard, Settings, Plus, Search, Filter, ChevronRight } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { createClient } from '@/lib/supabase/client';
+import { getBrandCampaigns } from '@/lib/api';
+import { ApiError } from '@/lib/api/client';
 import Link from 'next/link';
 
 export default function BrandCampaigns() {
   const [campaigns, setCampaigns] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const supabase = createClient();
 
   useEffect(() => {
     const fetchCampaigns = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data } = await supabase
-        .from('campaigns')
-        .select(`
-          *,
-          deliverables(count),
-          campaign_applications(count)
-        `)
-        .eq('brand_id', user.id)
-        .order('created_at', { ascending: false });
-      
-      if (data) setCampaigns(data);
-      setLoading(false);
+      try {
+        const { campaigns } = await getBrandCampaigns();
+        setCampaigns(
+          campaigns.map((c: any) => ({
+            ...c,
+            id: c.id ?? c._id?.toString(),
+            created_at: c.created_at ?? c.createdAt,
+            payout_amount: c.payout_amount ?? c.payoutAmount,
+            campaign_applications: [{ count: c.applicationCount ?? 0 }],
+            deliverables: [{ count: c.deliverableCount ?? 0 }],
+          }))
+        );
+      } catch (err) {
+        if (err instanceof ApiError) console.error(err.message);
+      } finally {
+        setLoading(false);
+      }
     };
     fetchCampaigns();
   }, []);
 
-  const sidebarItems = [
-    { label: 'Overview', icon: LayoutDashboard, href: '/dashboard/brand' },
-    { label: 'My Campaigns', icon: Video, href: '/dashboard/brand/campaigns' },
-    { label: 'Billing', icon: CreditCard, href: '/dashboard/brand/billing' },
-    { label: 'Settings', icon: Settings, href: '/dashboard/settings' },
-  ];
-
   return (
-    <DashboardLayout role="Brand" items={sidebarItems}>
+    <DashboardLayout role="Brand" navRole="brand">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">My Campaigns</h1>
-          <p className="text-gray-500 text-sm">Manage your active briefs and creator submissions.</p>
+          <p className="text-gray-500 text-sm">Submit briefs and track video ads managed by the UGCFlow team.</p>
         </div>
         <Link 
           href="/dashboard/brand/campaigns/new"
@@ -63,7 +58,7 @@ export default function BrandCampaigns() {
               <Video size={32} />
             </div>
             <h3 className="text-lg font-bold text-gray-900 mb-1">No campaigns yet</h3>
-            <p className="text-gray-500 mb-6">Launch your first campaign to start receiving UGC.</p>
+            <p className="text-gray-500 mb-6">Submit your first brief and we&apos;ll handle creator sourcing and delivery.</p>
             <Link href="/dashboard/brand/campaigns/new" className="text-indigo-600 font-bold hover:underline">
               Get Started →
             </Link>
@@ -88,7 +83,7 @@ export default function BrandCampaigns() {
                   <div className="flex items-center gap-4 text-xs text-gray-500">
                     <span>Created {new Date(campaign.created_at).toLocaleDateString()}</span>
                     <span className="w-1 h-1 bg-gray-300 rounded-full"></span>
-                    <span className="font-medium text-gray-700">{campaign.campaign_applications[0]?.count || 0} Applications</span>
+                    <span className="font-medium text-gray-700">{campaign.campaign_applications[0]?.count || 0} Matched creators</span>
                     <span className="w-1 h-1 bg-gray-300 rounded-full"></span>
                     <span className="font-medium text-gray-700">{campaign.deliverables[0]?.count || 0} Videos</span>
                   </div>

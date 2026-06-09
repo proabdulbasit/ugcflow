@@ -2,50 +2,42 @@
 import DashboardLayout from '@/components/DashboardLayout';
 import { LayoutDashboard, Video, Search, DollarSign, TrendingUp, Wallet, Clock, CheckCircle2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { createClient } from '@/lib/supabase/client';
+import { getCreatorEarnings } from '@/lib/api';
+import { ApiError } from '@/lib/api/client';
 
 export default function CreatorEarnings() {
   const [earnings, setEarnings] = useState<any[]>([]);
   const [stats, setStats] = useState({ total: 0, pending: 0, paid: 0 });
   const [loading, setLoading] = useState(true);
-  const supabase = createClient();
 
   useEffect(() => {
     const fetchEarnings = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data } = await supabase
-        .from('creator_earnings')
-        .select('*, campaigns(title)')
-        .eq('creator_id', user.id)
-        .order('created_at', { ascending: false });
-      
-      if (data) {
-        setEarnings(data);
-        const total = data.reduce((acc: number, curr: any) => acc + Number(curr.amount), 0);
-        const pending = data
+      try {
+        const { earnings: data } = await getCreatorEarnings();
+        const mapped = data.map((e: any) => ({
+          ...e,
+          created_at: e.created_at ?? e.createdAt,
+        }));
+        setEarnings(mapped);
+        const total = mapped.reduce((acc: number, curr: any) => acc + Number(curr.amount), 0);
+        const pending = mapped
           .filter((e: any) => e.status === 'pending')
           .reduce((acc: number, curr: any) => acc + Number(curr.amount), 0);
-        const paid = data
+        const paid = mapped
           .filter((e: any) => e.status === 'paid')
           .reduce((acc: number, curr: any) => acc + Number(curr.amount), 0);
         setStats({ total, pending, paid });
+      } catch (err) {
+        if (err instanceof ApiError) console.error(err.message);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
     fetchEarnings();
   }, []);
 
-  const sidebarItems = [
-    { label: 'Overview', icon: LayoutDashboard, href: '/dashboard/creator' },
-    { label: 'Browse Jobs', icon: Search, href: '/dashboard/creator/browse' },
-    { label: 'My Assignments', icon: Video, href: '/dashboard/creator/assignments' },
-    { label: 'Earnings', icon: DollarSign, href: '/dashboard/creator/earnings' },
-  ];
-
   return (
-    <DashboardLayout role="Creator" items={sidebarItems}>
+    <DashboardLayout role="Creator" navRole="creator">
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-900">My Earnings</h1>
         <p className="text-gray-500 text-sm">Track your income and payout status.</p>

@@ -1,7 +1,7 @@
 import { headers } from 'next/headers';
 import { NextResponse } from 'next/server';
 import { getStripe } from '@/lib/stripe';
-import { createServiceRoleClient } from '@/lib/supabase/admin';
+import { API_URL } from '@/lib/api/client';
 
 export async function POST(req: Request) {
   const stripe = getStripe();
@@ -21,8 +21,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: `Webhook Error: ${err.message}` }, { status: 400 });
   }
 
-  const supabase = createServiceRoleClient();
-
   if (event.type === 'checkout.session.completed') {
     const session = event.data.object as any;
     const { brandId, packageId } = session.metadata;
@@ -32,49 +30,23 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Missing metadata' }, { status: 400 });
     }
 
-    // 1. Get package details
-    const { data: pkg, error: pkgError } = await supabase
-      .from('packages')
-      .select('name, video_count, price')
-      .eq('id', packageId)
-      .single();
-
-    if (pkgError || !pkg) {
-      console.error('Package not found:', packageId);
-      return NextResponse.json({ error: 'Package not found' }, { status: 404 });
-    }
-
-    const creditsToAdd =
-      String(pkg.name || '').toLowerCase().includes('starter') ? 267 :
-      String(pkg.name || '').toLowerCase().includes('growth') ? 534 :
-      String(pkg.name || '').toLowerCase().includes('scale') ? 890 :
-      // fallback (old behavior)
-      Number(pkg.video_count) || 0;
-
-    // 2. Update brand credits using the RPC function
-    const { error: creditError } = await supabase.rpc('increment_brand_credits', {
-      brand_id_input: brandId,
-      amount_input: creditsToAdd
+    const res = await fetch(`${API_URL}/api/payments/webhook-complete`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-internal-secret': process.env.JWT_SECRET || '',
+      },
+      body: JSON.stringify({
+        brandId,
+        packageId,
+        paymentIntentId: session.payment_intent as string,
+      }),
     });
 
-    if (creditError) {
-      console.error('Error updating credits:', creditError);
-      return NextResponse.json({ error: 'Failed to update credits' }, { status: 500 });
-    }
-
-    // 3. Record the payment
-    const { error: paymentError } = await supabase
-      .from('payments')
-      .insert({
-        brand_id: brandId,
-        package_id: packageId,
-        amount: pkg.price,
-        stripe_payment_intent_id: session.payment_intent as string,
-        status: 'completed'
-      });
-
-    if (paymentError) {
-      console.error('Error recording payment:', paymentError);
+    if (!res.ok) {
+      const json = await res.json().catch(() => ({}));
+      console.error('Backend webhook handler failed:', json);
+      return NextResponse.json({ error: 'Failed to process payment' }, { status: 500 });
     }
   }
 

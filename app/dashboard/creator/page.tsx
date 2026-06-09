@@ -2,42 +2,33 @@
 import DashboardLayout from '@/components/DashboardLayout';
 import { LayoutDashboard, Video, Search, DollarSign, Clock, CheckCircle2, TrendingUp } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { createClient } from '@/lib/supabase/client';
+import { getCreatorOverview } from '@/lib/api';
+import { ApiError } from '@/lib/api/client';
 import Link from 'next/link';
 
 export default function CreatorDashboard() {
   const [stats, setStats] = useState({ activeJobs: 0, totalEarnings: 0, pendingReview: 0 });
   const [loading, setLoading] = useState(true);
-  const supabase = createClient();
-
   useEffect(() => {
     const fetchStats = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { count: activeCount } = await supabase.from('campaign_creators').select('*', { count: 'exact', head: true }).eq('creator_id', user.id);
-      const { data: earnings } = await supabase.from('creator_earnings').select('amount').eq('creator_id', user.id);
-      const { count: pendingCount } = await supabase.from('deliverables').select('*', { count: 'exact', head: true }).eq('creator_id', user.id).eq('status', 'pending');
-
-      setStats({
-        activeJobs: activeCount || 0,
-        totalEarnings: earnings?.reduce((acc: number, curr: any) => acc + Number(curr.amount), 0) || 0,
-        pendingReview: pendingCount || 0
-      });
-      setLoading(false);
+      try {
+        const data = await getCreatorOverview();
+        setStats({
+          activeJobs: data.activeAssignments || 0,
+          totalEarnings: data.totalEarnings || 0,
+          pendingReview: data.pendingDeliverables || 0,
+        });
+      } catch (err) {
+        if (err instanceof ApiError) console.error(err.message);
+      } finally {
+        setLoading(false);
+      }
     };
     fetchStats();
   }, []);
 
-  const sidebarItems = [
-    { label: 'Overview', icon: LayoutDashboard, href: '/dashboard/creator' },
-    { label: 'Browse Jobs', icon: Search, href: '/dashboard/creator/browse' },
-    { label: 'My Assignments', icon: Video, href: '/dashboard/creator/assignments' },
-    { label: 'Earnings', icon: DollarSign, href: '/dashboard/creator/earnings' },
-  ];
-
   return (
-    <DashboardLayout role="Creator" items={sidebarItems}>
+    <DashboardLayout role="Creator" navRole="creator">
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-900">Creator Overview</h1>
         <p className="text-gray-500 text-sm">Track your active projects and earnings.</p>

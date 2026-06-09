@@ -1,31 +1,47 @@
 'use client';
-import React from 'react';
+import React, { useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { LogOut, Menu, X } from 'lucide-react';
-import { createClient } from '@/lib/supabase/client';
-
-interface SidebarItem {
-  label: string;
-  icon: any;
-  href: string;
-}
+import { getMe, logout } from '@/lib/api/auth';
+import { getDashboardNav, type NavItem } from '@/lib/dashboard-nav';
 
 export default function DashboardLayout({ 
   children, 
   role, 
-  items 
+  items,
+  navRole,
 }: { 
   children: React.ReactNode; 
   role: string; 
-  items: SidebarItem[] 
+  items?: NavItem[];
+  navRole?: 'admin' | 'brand' | 'creator';
 }) {
   const pathname = usePathname();
-  const supabase = createClient();
+  const router = useRouter();
   const [mobileOpen, setMobileOpen] = React.useState(false);
+  const sidebarItems = items ?? (navRole ? getDashboardNav(navRole) : []);
+
+  useEffect(() => {
+    const guard = async () => {
+      try {
+        const { user, roleData } = await getMe();
+        const status = roleData?.status as string | undefined;
+        if (user.role === 'brand' || user.role === 'creator') {
+          if (status === 'pending' || status === 'rejected') {
+            await logout();
+            router.replace(`/login?role=${user.role}&status=${status}`);
+          }
+        }
+      } catch {
+        // Auth handled by middleware
+      }
+    };
+    guard();
+  }, [router]);
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    await logout();
     window.location.href = '/login';
   };
 
@@ -41,7 +57,7 @@ export default function DashboardLayout({
       </div>
 
       <nav className="flex-1 px-4 space-y-1">
-        {items.map((item) => {
+        {sidebarItems.map((item) => {
           const Icon = item.icon;
           const isActive = pathname === item.href;
           return (
@@ -76,12 +92,10 @@ export default function DashboardLayout({
 
   return (
     <div className="min-h-screen bg-gray-50 md:flex">
-      {/* Desktop sidebar */}
       <aside className="hidden md:flex w-64 bg-white border-r border-gray-100 flex-col sticky top-0 h-screen">
         {SidebarNav}
       </aside>
 
-      {/* Mobile header */}
       <div className="md:hidden sticky top-0 z-40 bg-gray-50/80 backdrop-blur-md border-b border-gray-100">
         <div className="h-14 px-4 flex items-center justify-between">
           <button
@@ -98,21 +112,15 @@ export default function DashboardLayout({
         </div>
       </div>
 
-      {/* Mobile drawer */}
       {mobileOpen && (
         <div className="md:hidden fixed inset-0 z-50">
-          <div
-            className="absolute inset-0 bg-black/30"
-            onClick={() => setMobileOpen(false)}
-            aria-hidden="true"
-          />
+          <div className="absolute inset-0 bg-black/30" onClick={() => setMobileOpen(false)} aria-hidden="true" />
           <aside className="absolute left-0 top-0 bottom-0 w-80 max-w-[85vw] bg-white border-r border-gray-100 flex flex-col">
             {SidebarNav}
           </aside>
         </div>
       )}
 
-      {/* Main Content */}
       <main className="flex-1 px-4 py-6 sm:px-6 sm:py-8 overflow-x-hidden">
         {children}
       </main>

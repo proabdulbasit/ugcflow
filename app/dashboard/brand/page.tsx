@@ -2,7 +2,8 @@
 import DashboardLayout from '@/components/DashboardLayout';
 import { LayoutDashboard, Video, CreditCard, Settings, Plus, Clock, CheckCircle2, ChevronRight } from 'lucide-react';
 import { Suspense, useEffect, useState } from 'react';
-import { createClient } from '@/lib/supabase/client';
+import { getBrandOverview } from '@/lib/api';
+import { ApiError } from '@/lib/api/client';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 
@@ -10,68 +11,29 @@ function BrandDashboardInner() {
   const [stats, setStats] = useState({ activeCampaigns: 0, credits: 0, pendingDeliverables: 0 });
   const [recentDeliverables, setRecentDeliverables] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const supabase = createClient();
   const searchParams = useSearchParams();
   const router = useRouter();
 
   useEffect(() => {
     const fetchData = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      // 1. Get Brand Stats
-      const { data: brand } = await supabase
-        .from('brands')
-        .select('credits')
-        .eq('id', user.id)
-        .single();
-
-      const { count: campaignCount } = await supabase
-        .from('campaigns')
-        .select('*', { count: 'exact', head: true })
-        .eq('brand_id', user.id)
-        .eq('status', 'active');
-
-      const { data: campaignIds } = await supabase
-        .from('campaigns')
-        .select('id')
-        .eq('brand_id', user.id);
-
-      const ids = (campaignIds ?? []).map((c: any) => c.id);
-      const { count: pendingCount } =
-        ids.length === 0
-          ? { count: 0 }
-          : await supabase
-              .from('deliverables')
-              .select('*', { count: 'exact', head: true })
-              .in('campaign_id', ids)
-              .eq('status', 'pending');
-
-      setStats({
-        activeCampaigns: campaignCount || 0,
-        credits: brand?.credits || 0,
-        pendingDeliverables: pendingCount || 0
-      });
-
-      // 2. Get Recent Deliverables
-      const { data: deliverables } =
-        ids.length === 0
-          ? { data: [] as any[] }
-          : await supabase
-              .from('deliverables')
-              .select(
-                `
-                *,
-                campaigns (title),
-                creators (profiles (full_name))
-              `
-              )
-              .in('campaign_id', ids)
-              .order('created_at', { ascending: false })
-              .limit(5);
-
-      if (deliverables) setRecentDeliverables(deliverables);
-      setLoading(false);
+      try {
+        const data = await getBrandOverview();
+        setStats({
+          activeCampaigns: data.activeCampaigns || 0,
+          credits: data.credits || 0,
+          pendingDeliverables: data.pendingDeliverables || 0,
+        });
+        setRecentDeliverables(
+          (data.recentDeliverables || []).map((d: any) => ({
+            ...d,
+            campaign_id: d.campaign_id ?? d.campaignId,
+          }))
+        );
+      } catch (err) {
+        if (err instanceof ApiError) console.error(err.message);
+      } finally {
+        setLoading(false);
+      }
     };
 
     fetchData();
@@ -96,18 +58,11 @@ function BrandDashboardInner() {
     run();
   }, [router, searchParams]);
 
-  const sidebarItems = [
-    { label: 'Overview', icon: LayoutDashboard, href: '/dashboard/brand' },
-    { label: 'My Campaigns', icon: Video, href: '/dashboard/brand/campaigns' },
-    { label: 'Billing', icon: CreditCard, href: '/dashboard/brand/billing' },
-    { label: 'Settings', icon: Settings, href: '/dashboard/settings' },
-  ];
-
   return (
-    <DashboardLayout role="Brand" items={sidebarItems}>
+    <DashboardLayout role="Brand" navRole="brand">
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-900">Brand Overview</h1>
-        <p className="text-gray-500 text-sm">Welcome back! Here's what's happening with your campaigns.</p>
+        <p className="text-gray-500 text-sm">Submit briefs, review video ads, and let UGCFlow handle creator sourcing and management.</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -174,12 +129,12 @@ function BrandDashboardInner() {
         <div className="space-y-6">
           <div className="bg-indigo-600 p-6 rounded-2xl text-white shadow-lg shadow-indigo-100">
             <h3 className="font-bold mb-2">Need more content?</h3>
-            <p className="text-indigo-100 text-sm mb-6">Launch a new campaign and get high-quality UGC in days.</p>
+            <p className="text-indigo-100 text-sm mb-6">Submit a new brief and we&apos;ll deliver high-converting video ads without you chasing creators.</p>
             <Link 
               href="/dashboard/brand/campaigns/new"
               className="block w-full py-3 bg-white text-indigo-600 text-center rounded-xl font-bold hover:bg-indigo-50 transition-colors"
             >
-              Create Campaign
+              Submit Brief
             </Link>
           </div>
 

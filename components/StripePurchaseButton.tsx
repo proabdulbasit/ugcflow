@@ -1,9 +1,10 @@
 'use client';
 import { useState } from 'react';
+import { toast } from '@/lib/toast';
 import { Zap } from 'lucide-react';
 
 interface StripePurchaseButtonProps {
-  priceId: string;
+  priceId?: string | null;
   packageId: string;
 }
 
@@ -31,7 +32,7 @@ export default function StripePurchaseButton({ priceId, packageId }: StripePurch
       if (body.error) throw new Error(body.error);
       if (body.url) window.location.href = body.url;
     } catch (err: any) {
-      alert(err.message || 'Something went wrong');
+      toast.error(err.message || 'Something went wrong');
     } finally {
       setLoading(false);
     }

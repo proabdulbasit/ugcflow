@@ -2,59 +2,57 @@
 import DashboardLayout from '@/components/DashboardLayout';
 import { Check, CreditCard, LayoutDashboard, Search, Settings, Users, Video, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { createClient } from '@/lib/supabase/client';
+import { getAdminCreators, updateCreatorStatus } from '@/lib/api';
+import { ApiError } from '@/lib/api/client';
+import { toast } from '@/lib/toast';
 
 type CreatorRow = any;
+
+function mapCreator(c: any): CreatorRow {
+  return {
+    ...c,
+    created_at: c.created_at ?? c.createdAt,
+    profiles: c.profiles
+      ? {
+          full_name: c.profiles.full_name ?? c.profiles.fullName,
+          email: c.profiles.email,
+        }
+      : null,
+  };
+}
 
 export default function AdminCreatorsPage() {
   const [creators, setCreators] = useState<CreatorRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [query, setQuery] = useState('');
-  const supabase = createClient();
-
-  useEffect(() => {
-    const fetchCreators = async () => {
-      setLoading(true);
-      const { data, error } = await supabase
-        .from('creators')
-        .select('*, profiles(full_name, email)')
-        .order('created_at', { ascending: false });
-
-      if (error) alert(error.message);
-      setCreators((data ?? []) as any);
-      setLoading(false);
-    };
-    fetchCreators();
-  }, []);
-
-  const sidebarItems = [
-    { label: 'Overview', icon: LayoutDashboard, href: '/dashboard/admin' },
-    { label: 'Creators', icon: Users, href: '/dashboard/admin/creators' },
-    { label: 'Brands', icon: Users, href: '/dashboard/admin/brands' },
-    { label: 'Campaigns', icon: Video, href: '/dashboard/admin/campaigns' },
-    { label: 'Submissions', icon: Video, href: '/dashboard/admin/submissions' },
-    { label: 'Payments', icon: CreditCard, href: '/dashboard/admin/payments' },
-    { label: 'Settings', icon: Settings, href: '/dashboard/settings' },
-  ];
 
   const fetchCreators = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from('creators')
-      .select('*, profiles(full_name, email)')
-      .order('created_at', { ascending: false });
-    if (error) alert(error.message);
-    setCreators((data ?? []) as any);
-    setLoading(false);
+    try {
+      const { creators: data } = await getAdminCreators();
+      setCreators(data.map(mapCreator));
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Failed to load creators');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const updateCreatorStatus = async (id: string, status: 'approved' | 'rejected') => {
-    setUpdatingId(id);
-    const { error } = await supabase.from('creators').update({ status }).eq('id', id);
-    if (error) alert(error.message);
-    setUpdatingId(null);
+  useEffect(() => {
     fetchCreators();
+  }, []);
+
+  const handleUpdateCreatorStatus = async (id: string, status: 'approved' | 'rejected') => {
+    setUpdatingId(id);
+    try {
+      await updateCreatorStatus(id, status);
+      fetchCreators();
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Update failed');
+    } finally {
+      setUpdatingId(null);
+    }
   };
 
   const filtered = creators.filter((c: any) => {
@@ -81,7 +79,7 @@ export default function AdminCreatorsPage() {
   );
 
   return (
-    <DashboardLayout role="Admin" items={sidebarItems}>
+    <DashboardLayout role="Admin" navRole="admin">
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-900">Creators</h1>
         <p className="text-gray-500 text-sm">Approve or reject creator applications.</p>
@@ -145,14 +143,14 @@ export default function AdminCreatorsPage() {
                   <td className="px-6 py-4 text-right">
                     <div className="inline-flex items-center gap-2">
                       <button
-                        onClick={() => updateCreatorStatus(c.id, 'approved')}
+                        onClick={() => handleUpdateCreatorStatus(c.id, 'approved')}
                         disabled={updatingId === c.id || c.status === 'approved'}
                         className="inline-flex items-center gap-1 px-3 py-2 rounded-lg bg-green-600 text-white text-sm font-bold hover:bg-green-700 disabled:opacity-50"
                       >
                         <Check size={16} /> Approve
                       </button>
                       <button
-                        onClick={() => updateCreatorStatus(c.id, 'rejected')}
+                        onClick={() => handleUpdateCreatorStatus(c.id, 'rejected')}
                         disabled={updatingId === c.id || c.status === 'rejected'}
                         className="inline-flex items-center gap-1 px-3 py-2 rounded-lg bg-red-600 text-white text-sm font-bold hover:bg-red-700 disabled:opacity-50"
                       >

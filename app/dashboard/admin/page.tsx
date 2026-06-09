@@ -1,86 +1,105 @@
 'use client';
 import DashboardLayout from '@/components/DashboardLayout';
-import { LayoutDashboard, Users, Package, Video, CreditCard, Check, X, Settings, Download } from 'lucide-react';
+import { Check, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { createClient } from '@/lib/supabase/client';
+import { getAdminOverview, updateCreatorStatus, updateBrandStatus } from '@/lib/api';
+import { ApiError } from '@/lib/api/client';
+import { toast } from '@/lib/toast';
+
+function mapCreator(c: any) {
+  return {
+    ...c,
+    profiles: c.profiles
+      ? {
+          full_name: c.profiles.full_name ?? c.profiles.fullName,
+          email: c.profiles.email,
+        }
+      : null,
+  };
+}
 
 export default function AdminDashboard() {
-  const [stats, setStats] = useState({ pendingCreators: 0, activeBrands: 0, openCampaigns: 0, revenue: 0 });
+  const [stats, setStats] = useState({
+    pendingCreators: 0,
+    pendingBrands: 0,
+    activeBrands: 0,
+    openCampaigns: 0,
+    pendingSubmissions: 0,
+    approvedSubmissions: 0,
+    rejectedSubmissions: 0,
+    revenue: 0,
+  });
   const [pendingApplications, setPendingApplications] = useState<any[]>([]);
+  const [pendingBrandApplications, setPendingBrandApplications] = useState<any[]>([]);
   const [recentPayments, setRecentPayments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const supabase = createClient();
 
   const fetchData = async () => {
-    // 1. Stats
-    const { count: creatorCount } = await supabase.from('creators').select('*', { count: 'exact', head: true }).eq('status', 'pending');
-    const { count: brandCount } = await supabase.from('brands').select('*', { count: 'exact', head: true }).eq('status', 'approved');
-    const { count: campaignCount } = await supabase.from('campaigns').select('*', { count: 'exact', head: true }).eq('status', 'active');
-    
-    // Changed 'paid' to 'completed' to match webhook logic
-    const { data: paymentsData } = await supabase.from('payments').select('amount').eq('status', 'completed');
-    const totalRevenue = paymentsData?.reduce((acc: number, curr: any) => acc + Number(curr.amount), 0) || 0;
-
-    setStats({
-      pendingCreators: creatorCount || 0,
-      activeBrands: brandCount || 0,
-      openCampaigns: campaignCount || 0,
-      revenue: totalRevenue
-    });
-
-    // 2. Pending Creator Applications
-    const { data: creators } = await supabase
-      .from('creators')
-      .select('*, profiles(full_name, email)')
-      .eq('status', 'pending')
-      .limit(5);
-    if (creators) setPendingApplications(creators);
-
-    // 3. Recent Payments
-    const { data: payments } = await supabase
-      .from('payments')
-      .select('*, brands(company_name)')
-      .order('created_at', { ascending: false })
-      .limit(5);
-    if (payments) setRecentPayments(payments);
-
-    setLoading(false);
+    try {
+      const data = await getAdminOverview();
+      setStats({
+        pendingCreators: data.pendingCreators || 0,
+        pendingBrands: data.pendingBrands || 0,
+        activeBrands: data.approvedBrands || 0,
+        openCampaigns: data.activeCampaigns || 0,
+        pendingSubmissions: data.pendingSubmissions || 0,
+        approvedSubmissions: data.approvedSubmissions || 0,
+        rejectedSubmissions: data.rejectedSubmissions || 0,
+        revenue: data.revenue || 0,
+      });
+      setPendingApplications((data.pendingCreatorList ?? []).map(mapCreator));
+      setPendingBrandApplications(data.pendingBrandList ?? []);
+      setRecentPayments(
+        (data.recentPayments ?? []).map((p: any) => ({
+          ...p,
+          created_at: p.created_at ?? p.createdAt,
+          brands: p.brands ?? (p.brand ? { company_name: p.brand.companyName } : null),
+        }))
+      );
+    } catch (err) {
+      if (err instanceof ApiError) console.error(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
     fetchData();
   }, []);
 
-  const updateCreatorStatus = async (id: string, status: 'approved' | 'rejected') => {
-    const { error } = await supabase.from('creators').update({ status }).eq('id', id);
-    if (error) alert(error.message);
-    else fetchData();
+  const handleUpdateCreatorStatus = async (id: string, status: 'approved' | 'rejected') => {
+    try {
+      await updateCreatorStatus(id, status);
+      fetchData();
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Update failed');
+    }
   };
 
-  const sidebarItems = [
-    { label: 'Overview', icon: LayoutDashboard, href: '/dashboard/admin' },
-    { label: 'Creators', icon: Users, href: '/dashboard/admin/creators' },
-    { label: 'Brands', icon: Users, href: '/dashboard/admin/brands' },
-    { label: 'Campaigns', icon: Video, href: '/dashboard/admin/campaigns' },
-    { label: 'Payments', icon: CreditCard, href: '/dashboard/admin/payments' },
-    { label: 'Settings', icon: Settings, href: '/dashboard/settings' },
-  ];
-
-  const handleDownloadSource = () => {
-    window.location.href = '/api/download-source';
+  const handleUpdateBrandStatus = async (id: string, status: 'approved' | 'rejected') => {
+    try {
+      await updateBrandStatus(id, status);
+      toast.success(status === 'approved' ? 'Brand approved' : 'Brand rejected');
+      fetchData();
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Update failed');
+    }
   };
 
   return (
-    <DashboardLayout role="Admin" items={sidebarItems}>
+    <DashboardLayout role="Admin" navRole="admin">
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-2xl font-bold text-gray-900">Admin Overview</h1>
-      
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
         <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
           <div className="text-gray-500 text-sm mb-1">Pending Creators</div>
           <div className="text-2xl font-bold text-orange-600">{loading ? '...' : stats.pendingCreators}</div>
+        </div>
+        <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
+          <div className="text-gray-500 text-sm mb-1">Pending Brands</div>
+          <div className="text-2xl font-bold text-orange-600">{loading ? '...' : stats.pendingBrands}</div>
         </div>
         <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
           <div className="text-gray-500 text-sm mb-1">Active Brands</div>
@@ -96,7 +115,22 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
+          <div className="text-gray-500 text-sm mb-1">Pending Submissions</div>
+          <div className="text-2xl font-bold text-orange-600">{loading ? '...' : stats.pendingSubmissions}</div>
+        </div>
+        <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
+          <div className="text-gray-500 text-sm mb-1">Approved Submissions</div>
+          <div className="text-2xl font-bold text-green-600">{loading ? '...' : stats.approvedSubmissions}</div>
+        </div>
+        <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
+          <div className="text-gray-500 text-sm mb-1">Rejected Submissions</div>
+          <div className="text-2xl font-bold text-red-600">{loading ? '...' : stats.rejectedSubmissions}</div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
         <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
           <h3 className="font-bold mb-4">New Creator Applications</h3>
           <div className="space-y-4">
@@ -113,13 +147,13 @@ export default function AdminDashboard() {
                 </div>
                 <div className="flex gap-2">
                   <button 
-                    onClick={() => updateCreatorStatus(creator.id, 'approved')}
+                    onClick={() => handleUpdateCreatorStatus(creator.id, 'approved')}
                     className="p-1.5 bg-green-50 text-green-600 rounded hover:bg-green-100 transition-colors"
                   >
                     <Check size={16} />
                   </button>
                   <button 
-                    onClick={() => updateCreatorStatus(creator.id, 'rejected')}
+                    onClick={() => handleUpdateCreatorStatus(creator.id, 'rejected')}
                     className="p-1.5 bg-red-50 text-red-600 rounded hover:bg-red-100 transition-colors"
                   >
                     <X size={16} />
@@ -148,6 +182,36 @@ export default function AdminDashboard() {
               </div>
             )) : (
               <div className="text-center py-8 text-gray-400 italic">No recent payments.</div>
+            )}
+          </div>
+        </div>
+
+        <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
+          <h3 className="font-bold mb-4">New Brand Applications</h3>
+          <div className="space-y-4">
+            {pendingBrandApplications.length > 0 ? pendingBrandApplications.map((brand: any) => (
+              <div key={brand.id} className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg transition-colors">
+                <div>
+                  <div className="font-medium">{brand.company_name ?? brand.profiles?.full_name}</div>
+                  <div className="text-xs text-gray-500">{brand.profiles?.email}</div>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => handleUpdateBrandStatus(brand.id, 'approved')}
+                    className="p-1.5 bg-green-50 text-green-600 rounded hover:bg-green-100 transition-colors"
+                  >
+                    <Check size={16} />
+                  </button>
+                  <button
+                    onClick={() => handleUpdateBrandStatus(brand.id, 'rejected')}
+                    className="p-1.5 bg-red-50 text-red-600 rounded hover:bg-red-100 transition-colors"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+              </div>
+            )) : (
+              <div className="text-center py-8 text-gray-400 italic">No pending brand applications.</div>
             )}
           </div>
         </div>

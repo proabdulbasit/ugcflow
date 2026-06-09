@@ -1,6 +1,8 @@
 'use client';
 import DashboardLayout from '@/components/DashboardLayout';
-import { createClient } from '@/lib/supabase/client';
+import { getAdminSubmissions, reviewDeliverable } from '@/lib/api';
+import { ApiError } from '@/lib/api/client';
+import { toast } from '@/lib/toast';
 import {
   CheckCircle2,
   Clock,
@@ -13,59 +15,35 @@ import {
   Video,
   XCircle,
 } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 type DeliverableRow = any;
 
+function mapDeliverable(d: any): DeliverableRow {
+  return {
+    ...d,
+    created_at: d.created_at ?? d.createdAt,
+  };
+}
+
 export default function AdminSubmissionsPage() {
-  const supabase = useMemo(() => createClient(), []);
   const [loading, setLoading] = useState(true);
   const [deliverables, setDeliverables] = useState<DeliverableRow[]>([]);
   const [reviewingId, setReviewingId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
   const [query, setQuery] = useState('');
 
-  const sidebarItems = [
-    { label: 'Overview', icon: LayoutDashboard, href: '/dashboard/admin' },
-    { label: 'Creators', icon: Users, href: '/dashboard/admin/creators' },
-    { label: 'Brands', icon: Users, href: '/dashboard/admin/brands' },
-    { label: 'Campaigns', icon: Video, href: '/dashboard/admin/campaigns' },
-    { label: 'Submissions', icon: Video, href: '/dashboard/admin/submissions' },
-    { label: 'Messaging', icon: MessageSquare, href: '/dashboard/admin/messaging' },
-    { label: 'Payments', icon: CreditCard, href: '/dashboard/admin/payments' },
-    { label: 'Settings', icon: Settings, href: '/dashboard/settings' },
-  ];
-
   const fetchDeliverables = useCallback(async () => {
-    if (!supabase) return;
     setLoading(true);
-
-    let q = supabase
-      .from('deliverables')
-      .select(
-        `
-        *,
-        campaigns (
-          id,
-          title,
-          brands ( company_name )
-        ),
-        creators (
-          id,
-          profiles ( full_name, email )
-        )
-      `
-      )
-      .order('created_at', { ascending: false })
-      .limit(200);
-
-    if (statusFilter !== 'all') q = q.eq('status', statusFilter);
-
-    const { data, error } = await q;
-    if (error) alert(error.message);
-    setDeliverables((data ?? []) as any);
-    setLoading(false);
-  }, [statusFilter, supabase]);
+    try {
+      const { deliverables: data } = await getAdminSubmissions(statusFilter);
+      setDeliverables(data.map(mapDeliverable));
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Failed to load submissions');
+    } finally {
+      setLoading(false);
+    }
+  }, [statusFilter]);
 
   useEffect(() => {
     fetchDeliverables();
@@ -73,43 +51,45 @@ export default function AdminSubmissionsPage() {
 
   const handleReview = useCallback(
     async (deliverableId: string, status: 'approved' | 'rejected') => {
-      if (!supabase) return;
-
       const feedback =
         status === 'rejected'
           ? window.prompt('Optional feedback for the creator (shown in notification).', '') ?? undefined
           : undefined;
 
       setReviewingId(deliverableId);
-      const { error } = await supabase.from('deliverables').update({ status, feedback }).eq('id', deliverableId);
-      if (error) alert(error.message);
+      try {
+        await reviewDeliverable(deliverableId, status, feedback);
 
-      const deliverable = deliverables.find((d) => d.id === deliverableId);
-      const creatorEmail = deliverable?.creators?.profiles?.email;
-      const creatorName = deliverable?.creators?.profiles?.full_name;
-      const campaignTitle = deliverable?.campaigns?.title;
+        const deliverable = deliverables.find((d) => d.id === deliverableId);
+        const creatorEmail = deliverable?.creators?.profiles?.email;
+        const creatorName = deliverable?.creators?.profiles?.full_name;
+        const campaignTitle = deliverable?.campaigns?.title;
 
-      if (creatorEmail) {
-        await fetch('/api/notifications', {
-          method: 'POST',
-          body: JSON.stringify({
-            type: 'DELIVERABLE_REVIEWED',
-            data: {
-              creatorEmail,
-              creatorName,
-              campaignTitle,
-              status,
-              feedback,
-              campaignId: deliverable?.campaign_id,
-            },
-          }),
-        });
+        if (creatorEmail) {
+          await fetch('/api/notifications', {
+            method: 'POST',
+            body: JSON.stringify({
+              type: 'DELIVERABLE_REVIEWED',
+              data: {
+                creatorEmail,
+                creatorName,
+                campaignTitle,
+                status,
+                feedback,
+                campaignId: deliverable?.campaign_id,
+              },
+            }),
+          });
+        }
+
+        fetchDeliverables();
+      } catch (err) {
+        toast.error(err instanceof ApiError ? err.message : 'Review failed');
+      } finally {
+        setReviewingId(null);
       }
-
-      setReviewingId(null);
-      fetchDeliverables();
     },
-    [deliverables, fetchDeliverables, supabase]
+    [deliverables, fetchDeliverables]
   );
 
   const filtered = deliverables.filter((d: any) => {
@@ -140,7 +120,7 @@ export default function AdminSubmissionsPage() {
   );
 
   return (
-    <DashboardLayout role="Admin" items={sidebarItems}>
+    <DashboardLayout role="Admin" navRole="admin">
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-900">Submissions</h1>
         <p className="text-gray-500 text-sm">Review creator deliverables across all campaigns.</p>
@@ -250,4 +230,3 @@ export default function AdminSubmissionsPage() {
     </DashboardLayout>
   );
 }
-

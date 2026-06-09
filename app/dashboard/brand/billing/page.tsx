@@ -2,7 +2,8 @@
 import DashboardLayout from '@/components/DashboardLayout';
 import { LayoutDashboard, Video, CreditCard, Settings, Zap, CheckCircle2 } from 'lucide-react';
 import { Suspense, useEffect, useState } from 'react';
-import { createClient } from '@/lib/supabase/client';
+import { getBrandBilling } from '@/lib/api';
+import { ApiError } from '@/lib/api/client';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 
@@ -12,34 +13,23 @@ function BrandBillingInner() {
   const [loading, setLoading] = useState(true);
   const [reconciling, setReconciling] = useState(false);
   const [reconcileMessage, setReconcileMessage] = useState<string | null>(null);
-  const supabase = createClient();
   const searchParams = useSearchParams();
   const router = useRouter();
 
   const fetchBillingData = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    // Fetch credits
-    const { data: brand } = await supabase
-      .from('brands')
-      .select('credits')
-      .eq('id', user.id)
-      .single();
-
-    if (brand) setCredits(brand.credits || 0);
-
-    // Fetch payment history
-    const { data: paymentsData } = await supabase
-      .from('payments')
-      .select(`
-          *,
-          packages (name)
-        `)
-      .eq('brand_id', user.id)
-      .order('created_at', { ascending: false });
-
-    if (paymentsData) setPayments(paymentsData);
+    try {
+      const data = await getBrandBilling();
+      setCredits(data.credits || 0);
+      setPayments(
+        (data.payments ?? []).map((p: any) => ({
+          ...p,
+          created_at: p.created_at ?? p.createdAt,
+          packages: p.packages ?? (p.package ? { name: p.package.name } : null),
+        }))
+      );
+    } catch (err) {
+      if (err instanceof ApiError) console.error(err.message);
+    }
   };
 
   useEffect(() => {
@@ -84,15 +74,8 @@ function BrandBillingInner() {
     run();
   }, [reconciling, router, searchParams]);
 
-  const sidebarItems = [
-    { label: 'Overview', icon: LayoutDashboard, href: '/dashboard/brand' },
-    { label: 'My Campaigns', icon: Video, href: '/dashboard/brand/campaigns' },
-    { label: 'Billing', icon: CreditCard, href: '/dashboard/brand/billing' },
-    { label: 'Settings', icon: Settings, href: '/dashboard/settings' },
-  ];
-
   return (
-    <DashboardLayout role="Brand" items={sidebarItems}>
+    <DashboardLayout role="Brand" navRole="brand">
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-900">Billing & Credits</h1>
         <p className="text-gray-500 text-sm">Manage your credits and view your transaction history.</p>
@@ -121,8 +104,9 @@ function BrandBillingInner() {
           <div className="w-12 h-12 bg-green-50 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
             <CheckCircle2 size={24} />
           </div>
-          <h3 className="font-bold text-gray-900">Auto-Refill</h3>
-          <p className="text-gray-500 text-sm mt-1">Never run out of content. Enable auto-refill in settings.</p>
+          <h3 className="font-bold text-gray-900">Need more credits?</h3>
+          <p className="text-gray-500 text-sm mt-1">Purchase a credit package from the pricing page anytime.</p>
+          <Link href="/pricing" className="inline-block mt-3 text-indigo-600 font-bold text-sm hover:underline">View pricing</Link>
         </div>
       </div>
 

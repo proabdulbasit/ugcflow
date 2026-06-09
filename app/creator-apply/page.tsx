@@ -1,21 +1,18 @@
 'use client';
 import Navbar from '@/components/Navbar';
+import Link from 'next/link';
 import { useState } from 'react';
-import { createClient } from '@/lib/supabase/client';
+import { applyCreator } from '@/lib/api/auth';
+import { ApiError } from '@/lib/api/client';
+import { toast } from '@/lib/toast';
 
 export default function CreatorApply() {
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  const supabase = createClient();
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
-    
-    if (!supabase) {
-      alert('App configuration error: Supabase environment variables are missing.');
-      return;
-    }
 
     const formData = new FormData(e.currentTarget);
     const email = formData.get('email') as string;
@@ -26,42 +23,30 @@ export default function CreatorApply() {
     const passwordConfirm = formData.get('passwordConfirm') as string;
 
     if (password !== passwordConfirm) {
-      alert('Passwords do not match.');
+      toast.error('Passwords do not match.');
       setLoading(false);
       return;
     }
     if (password.length < 8) {
-      alert('Password must be at least 8 characters.');
+      toast.error('Password must be at least 8 characters.');
       setLoading(false);
       return;
     }
 
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          full_name: fullName,
-          role: 'creator',
-          portfolio_url: portfolioUrl,
-          bio,
-        },
-      },
-    });
-
-    if (authError) {
-      alert(authError.message);
+    try {
+      await applyCreator({
+        email,
+        password,
+        fullName,
+        portfolioUrl,
+        bio,
+      });
+      setSubmitted(true);
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Registration failed');
+    } finally {
       setLoading(false);
-      return;
     }
-
-    // Do not PATCH public.creators here.
-    // On a fresh Supabase project this table might not exist yet, which causes:
-    // "Could not find the table 'public.creators' in the schema cache".
-    // The DB trigger (handle_new_user) is responsible for creating/updating role tables.
-
-    setLoading(false);
-    setSubmitted(true);
   };
 
   if (submitted) {
@@ -70,11 +55,21 @@ export default function CreatorApply() {
         <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 max-w-md text-center">
           <h1 className="text-2xl font-bold mb-4">Application Received!</h1>
           <p className="text-gray-600 mb-6">
-            We've received your portfolio. Our team will review your application and get back to you shortly.
+            We&apos;ve received your portfolio. An admin will review it and approve or reject your account.
+            You&apos;ll be able to log in once your application is approved.
           </p>
-          <button onClick={() => window.location.href = '/'} className="w-full py-3 bg-indigo-600 text-white rounded-lg font-bold">
+          <Link
+            href="/"
+            className="block w-full py-3 bg-indigo-600 text-white rounded-lg font-bold hover:bg-indigo-700 transition-colors"
+          >
             Back to Home
-          </button>
+          </Link>
+          <p className="text-sm text-gray-500 mt-4">
+            Already approved?{' '}
+            <Link href="/login?role=creator" className="text-indigo-600 font-semibold hover:underline">
+              Creator login
+            </Link>
+          </p>
         </div>
       </div>
     );
@@ -87,7 +82,7 @@ export default function CreatorApply() {
         <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
           <h1 className="text-3xl font-bold mb-2">Join our Creator Network</h1>
           <p className="text-gray-600 mb-8">Show us your best work and start working with top brands.</p>
-          
+
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
@@ -105,9 +100,9 @@ export default function CreatorApply() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Short Bio</label>
-              <textarea 
-                name="bio" 
-                required 
+              <textarea
+                name="bio"
+                required
                 placeholder="Tell us about your content style and experience..."
                 className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none h-32"
               ></textarea>

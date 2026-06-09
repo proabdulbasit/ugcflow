@@ -2,40 +2,41 @@
 import DashboardLayout from '@/components/DashboardLayout';
 import { LayoutDashboard, Users, Video, CreditCard, Eye, Settings } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { createClient } from '@/lib/supabase/client';
+import { getAdminCampaigns } from '@/lib/api';
+import { ApiError } from '@/lib/api/client';
 import Link from 'next/link';
 
 export default function AdminCampaigns() {
   const [campaigns, setCampaigns] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const supabase = createClient();
 
   const fetchCampaigns = async () => {
     setLoading(true);
-    const { data } = await supabase
-      .from('campaigns')
-      .select('*, brands(company_name)')
-      .order('created_at', { ascending: false });
-    
-    if (data) setCampaigns(data);
-    setLoading(false);
+    try {
+      const { campaigns: data } = await getAdminCampaigns();
+      setCampaigns(
+        data.map((c: any) => ({
+          ...c,
+          id: c.id ?? c._id?.toString(),
+          payout_amount: c.payout_amount ?? c.payoutAmount,
+          brands: c.brands
+            ? { company_name: c.brands.company_name ?? c.brands.companyName }
+            : null,
+        }))
+      );
+    } catch (err) {
+      if (err instanceof ApiError) console.error(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
     fetchCampaigns();
   }, []);
 
-  const sidebarItems = [
-    { label: 'Overview', icon: LayoutDashboard, href: '/dashboard/admin' },
-    { label: 'Creators', icon: Users, href: '/dashboard/admin/creators' },
-    { label: 'Brands', icon: Users, href: '/dashboard/admin/brands' },
-    { label: 'Campaigns', icon: Video, href: '/dashboard/admin/campaigns' },
-    { label: 'Payments', icon: CreditCard, href: '/dashboard/admin/payments' },
-    { label: 'Settings', icon: Settings, href: '/dashboard/settings' },
-  ];
-
   return (
-    <DashboardLayout role="Admin" items={sidebarItems}>
+    <DashboardLayout role="Admin" navRole="admin">
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-900">Campaign Management</h1>
         <p className="text-gray-500 text-sm">Monitor and manage all active UGC campaigns.</p>

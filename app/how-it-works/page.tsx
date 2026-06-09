@@ -4,8 +4,8 @@ export default function HowItWorks() {
   const steps = [
     { title: "1. Choose a Package", desc: "Select the UGC package that fits your brand's needs and budget." },
     { title: "2. Submit Your Brief", desc: "Tell us about your product and the type of content you're looking for." },
-    { title: "3. We Match Creators", desc: "Our team assigns the best-vetted creators for your specific niche." },
-    { title: "4. Content Delivery", desc: "Review and download your high-quality UGC directly from your dashboard." }
+    { title: "3. We Match Creators", desc: "Our team sources and assigns vetted creators — you never chase or manage them yourself." },
+    { title: "4. Review & Launch Ads", desc: "Approve finished video ads in your dashboard and run them on TikTok, Meta, and more." }
   ];
 
   return (

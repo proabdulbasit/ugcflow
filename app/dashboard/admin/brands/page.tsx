@@ -2,49 +2,60 @@
 import DashboardLayout from '@/components/DashboardLayout';
 import { LayoutDashboard, Users, Video, CreditCard, Settings, Check, X, Search } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { createClient } from '@/lib/supabase/client';
+import { getAdminBrands, updateBrandStatus } from '@/lib/api';
+import { ApiError } from '@/lib/api/client';
+import { toast } from '@/lib/toast';
 
 type BrandRow = any;
+
+function mapBrand(b: any): BrandRow {
+  return {
+    ...b,
+    company_name: b.company_name ?? b.companyName,
+    website_url: b.website_url ?? b.websiteUrl,
+    created_at: b.created_at ?? b.createdAt,
+    profiles: b.profiles
+      ? {
+          full_name: b.profiles.full_name ?? b.profiles.fullName,
+          email: b.profiles.email,
+        }
+      : null,
+  };
+}
 
 export default function AdminBrandsPage() {
   const [brands, setBrands] = useState<BrandRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [query, setQuery] = useState('');
-  const supabase = createClient();
 
   const fetchBrands = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from('brands')
-      .select('*, profiles(full_name, email)')
-      .order('created_at', { ascending: false });
-
-    if (error) alert(error.message);
-    setBrands((data ?? []) as any);
-    setLoading(false);
+    try {
+      const { brands: data } = await getAdminBrands();
+      setBrands(data.map(mapBrand));
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Failed to load brands');
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
     fetchBrands();
   }, []);
 
-  const updateBrandStatus = async (brandId: string, status: 'approved' | 'rejected') => {
+  const handleUpdateBrandStatus = async (brandId: string, status: 'approved' | 'rejected') => {
     setUpdatingId(brandId);
-    const { error } = await supabase.from('brands').update({ status }).eq('id', brandId);
-    if (error) alert(error.message);
-    setUpdatingId(null);
-    fetchBrands();
+    try {
+      await updateBrandStatus(brandId, status);
+      fetchBrands();
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Update failed');
+    } finally {
+      setUpdatingId(null);
+    }
   };
-
-  const sidebarItems = [
-    { label: 'Overview', icon: LayoutDashboard, href: '/dashboard/admin' },
-    { label: 'Creators', icon: Users, href: '/dashboard/admin/creators' },
-    { label: 'Brands', icon: Users, href: '/dashboard/admin/brands' },
-    { label: 'Campaigns', icon: Video, href: '/dashboard/admin/campaigns' },
-    { label: 'Payments', icon: CreditCard, href: '/dashboard/admin/payments' },
-    { label: 'Settings', icon: Settings, href: '/dashboard/settings' },
-  ];
 
   const filtered = brands.filter((b: any) => {
     const q = query.trim().toLowerCase();
@@ -71,7 +82,7 @@ export default function AdminBrandsPage() {
   );
 
   return (
-    <DashboardLayout role="Admin" items={sidebarItems}>
+    <DashboardLayout role="Admin" navRole="admin">
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-900">Brands</h1>
         <p className="text-gray-500 text-sm">Approve or reject brand applications.</p>
@@ -132,14 +143,14 @@ export default function AdminBrandsPage() {
                   <td className="px-6 py-4 text-right">
                     <div className="inline-flex items-center gap-2">
                       <button
-                        onClick={() => updateBrandStatus(b.id, 'approved')}
+                        onClick={() => handleUpdateBrandStatus(b.id, 'approved')}
                         disabled={updatingId === b.id || b.status === 'approved'}
                         className="inline-flex items-center gap-1 px-3 py-2 rounded-lg bg-green-600 text-white text-sm font-bold hover:bg-green-700 disabled:opacity-50"
                       >
                         <Check size={16} /> Approve
                       </button>
                       <button
-                        onClick={() => updateBrandStatus(b.id, 'rejected')}
+                        onClick={() => handleUpdateBrandStatus(b.id, 'rejected')}
                         disabled={updatingId === b.id || b.status === 'rejected'}
                         className="inline-flex items-center gap-1 px-3 py-2 rounded-lg bg-red-600 text-white text-sm font-bold hover:bg-red-700 disabled:opacity-50"
                       >

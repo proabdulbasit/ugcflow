@@ -2,36 +2,36 @@
 import DashboardLayout from '@/components/DashboardLayout';
 import { LayoutDashboard, Video, Search, DollarSign, Briefcase, CheckCircle2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { createClient } from '@/lib/supabase/client';
+import { browseCampaigns, applyToCampaign } from '@/lib/api';
+import { ApiError } from '@/lib/api/client';
+import { formatPlatform, formatVideoFormat } from '@/lib/campaign-brief';
+import { toast } from '@/lib/toast';
 
 export default function CreatorBrowse() {
   const [campaigns, setCampaigns] = useState<any[]>([]);
   const [appliedIds, setAppliedIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
-  const supabase = createClient();
+  const [error, setError] = useState<string | null>(null);
 
   const fetchData = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    // 1. Fetch active campaigns
-    const { data: campaignData } = await supabase
-      .from('campaigns')
-      .select('*, brands(company_name)')
-      .eq('status', 'active')
-      .order('created_at', { ascending: false });
-    
-    // 2. Fetch existing applications for this creator
-    const { data: applications } = await supabase
-      .from('campaign_applications')
-      .select('campaign_id')
-      .eq('creator_id', user.id);
-
-    if (campaignData) setCampaigns(campaignData);
-    if (applications) {
-      setAppliedIds(new Set(applications.map((a: any) => a.campaign_id)));
+    setLoading(true);
+    setError(null);
+    try {
+      const { campaigns: campaignData } = await browseCampaigns();
+      setCampaigns(
+        campaignData.map((c: any) => ({
+          ...c,
+          id: c.id ?? c._id?.toString(),
+          created_at: c.created_at ?? c.createdAt,
+          brands: c.brands ?? (c.brand ? { company_name: c.brand.companyName } : null),
+        }))
+      );
+      setAppliedIds(new Set(campaignData.filter((c: any) => c.hasApplied).map((c: any) => c.id ?? c._id?.toString())));
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Failed to load campaigns');
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   useEffect(() => {
@@ -39,40 +39,25 @@ export default function CreatorBrowse() {
   }, []);
 
   const handleApply = async (campaignId: string) => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    const { error } = await supabase
-      .from('campaign_applications')
-      .insert({
-        campaign_id: campaignId,
-        creator_id: user.id,
-        status: 'pending'
-      });
-
-    if (error) {
-      alert(error.message);
-    } else {
-      setAppliedIds(prev => new Set(prev).add(campaignId));
+    try {
+      await applyToCampaign(campaignId);
+      setAppliedIds((prev) => new Set(prev).add(campaignId));
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Failed to apply');
     }
   };
 
-  const sidebarItems = [
-    { label: 'Overview', icon: LayoutDashboard, href: '/dashboard/creator' },
-    { label: 'Browse Jobs', icon: Search, href: '/dashboard/creator/browse' },
-    { label: 'My Assignments', icon: Video, href: '/dashboard/creator/assignments' },
-    { label: 'Earnings', icon: DollarSign, href: '/dashboard/creator/earnings' },
-  ];
-
   return (
-    <DashboardLayout role="Creator" items={sidebarItems}>
+    <DashboardLayout role="Creator" navRole="creator">
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-900">Browse Open Campaigns</h1>
-        <p className="text-gray-500 text-sm">Find brands looking for creators like you.</p>
+        <p className="text-gray-500 text-sm">Vetted creator opportunities managed by the UGCFlow team.</p>
       </div>
 
       {loading ? (
         <div className="text-center py-20 text-gray-400">Loading campaigns...</div>
+      ) : error ? (
+        <div className="bg-red-50 p-6 rounded-2xl border border-red-100 text-center text-red-700">{error}</div>
       ) : campaigns.length === 0 ? (
         <div className="bg-white p-12 rounded-3xl border border-gray-100 text-center">
           <Briefcase className="mx-auto text-gray-300 mb-4" size={48} />
@@ -93,9 +78,33 @@ export default function CreatorBrowse() {
                 </div>
               </div>
               
-              <p className="text-gray-600 text-sm line-clamp-3 mb-6">
+              <div className="flex flex-wrap gap-2 mb-3">
+                {campaign.targetPlatform ? (
+                  <span className="text-[10px] font-bold uppercase px-2 py-1 rounded-full bg-indigo-50 text-indigo-700">
+                    {formatPlatform(campaign.targetPlatform)}
+                  </span>
+                ) : null}
+                {campaign.videoFormat ? (
+                  <span className="text-[10px] font-bold uppercase px-2 py-1 rounded-full bg-gray-100 text-gray-600">
+                    {formatVideoFormat(campaign.videoFormat)}
+                  </span>
+                ) : null}
+              </div>
+
+              <p className="text-gray-600 text-sm line-clamp-3 mb-4">
                 {campaign.brief}
               </p>
+
+              {campaign.referenceVideoUrl ? (
+                <a
+                  href={campaign.referenceVideoUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-indigo-600 font-medium hover:underline mb-4 inline-block"
+                >
+                  View reference video →
+                </a>
+              ) : null}
 
               <div className="flex items-center justify-between mt-auto pt-4 border-t border-gray-50">
                 <div className="text-xs text-gray-400">

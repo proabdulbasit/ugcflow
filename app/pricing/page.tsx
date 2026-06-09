@@ -2,7 +2,9 @@
 import Navbar from '@/components/Navbar';
 import { Check, Zap, AlertCircle, ArrowRight } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { createClient } from '@/lib/supabase/client';
+import { getPackages } from '@/lib/api';
+import { getMe } from '@/lib/api/auth';
+import { ApiError } from '@/lib/api/client';
 import Link from 'next/link';
 import StripePurchaseButton from '@/components/StripePurchaseButton';
 
@@ -17,29 +19,22 @@ export default function PricingPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [user, setUser] = useState<any>(null);
-  const supabase = createClient();
 
   useEffect(() => {
     const fetchData = async () => {
-      if (!supabase) {
-        setError('Supabase is not configured (missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY).');
-        setLoading(false);
-        return;
-      }
       try {
-        const { data: { user: authUser } } = await supabase.auth.getUser();
-        setUser(authUser);
+        try {
+          const { user: authUser } = await getMe();
+          setUser(authUser);
+        } catch {
+          setUser(null);
+        }
 
-        const { data, error: fetchError } = await supabase
-          .from('packages')
-          .select('*')
-          .order('price', { ascending: true });
-        
-        if (fetchError) throw fetchError;
-        if (data) setPackages(data);
-      } catch (err: any) {
+        const { packages } = await getPackages();
+        setPackages(packages);
+      } catch (err) {
         console.error('Error fetching data:', err);
-        setError(err.message);
+        setError(err instanceof ApiError ? err.message : 'Failed to load pricing');
       } finally {
         setLoading(false);
       }
@@ -132,13 +127,20 @@ export default function PricingPage() {
                   </ul>
 
                   <div className="mt-auto">
-                    {user ? (
+                    {user?.role === 'brand' ? (
                       <div className="w-full">
                         <StripePurchaseButton 
                           priceId={pkg.stripe_price_id} 
                           packageId={pkg.id}
                         />
                       </div>
+                    ) : user ? (
+                      <Link 
+                        href="/dashboard"
+                        className="w-full inline-flex items-center justify-center rounded-xl bg-gray-100 px-6 py-4 text-gray-700 font-bold hover:bg-gray-200 transition-all"
+                      >
+                        Go to Dashboard
+                      </Link>
                     ) : (
                       <Link 
                         href="/login" 

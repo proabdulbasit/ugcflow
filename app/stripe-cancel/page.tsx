@@ -21,10 +21,10 @@ export default function CancelPage() {
         <p className="mt-4 text-gray-700">You can return to the product page and resend the payment at any time.</p>
         <div className="mt-10">
           <Link
-            href="/"
+            href="/pricing"
             className="inline-flex items-center bg-[#ec625c] justify-center rounded-md px-5 py-2.5 text-white transition-opacity"
           >
-            Back to Home
+            Back to Pricing
           </Link>
         </div>
       </div>

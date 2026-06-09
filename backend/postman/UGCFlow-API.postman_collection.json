@@ -1,0 +1,633 @@
+{
+  "info": {
+    "_postman_id": "ugcflow-api-collection",
+    "name": "UGCFlow API",
+    "description": "Complete UGCFlow backend API (Express + MongoDB + JWT).\n\n**Base URL:** `{{baseUrl}}` (default: http://localhost:4000)\n\n**Auth:** Most routes require JWT. Run **Auth → Login** or **Register** first — the token is saved to `{{token}}` automatically.\n\n**Roles:** `admin` | `brand` | `creator`\n\n**Headers for protected routes:**\n- `Authorization: Bearer {{token}}`\n- OR cookie `token` (set automatically on login when using Postman cookie jar)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:4000" },
+    { "key": "token", "value": "" },
+    { "key": "adminSeedSecret", "value": "ugcflow-admin-seed-2026" },
+    { "key": "userId", "value": "" },
+    { "key": "brandId", "value": "" },
+    { "key": "creatorId", "value": "" },
+    { "key": "campaignId", "value": "" },
+    { "key": "deliverableId", "value": "" },
+    { "key": "packageId", "value": "" }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+  },
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/health",
+            "description": "Public health check. Returns `{ ok: true }`."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "description": "Registration, login, session. No auth required except `/me`.",
+      "item": [
+        {
+          "name": "Register Brand",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const json = pm.response.json();",
+                  "  pm.collectionVariables.set('token', json.token);",
+                  "  pm.collectionVariables.set('userId', json.user.id);",
+                  "  pm.collectionVariables.set('brandId', json.user.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"brand@example.com\",\n  \"password\": \"password123\",\n  \"fullName\": \"Jane Brand\",\n  \"role\": \"brand\",\n  \"companyName\": \"Acme Co\",\n  \"websiteUrl\": \"https://acme.com\",\n  \"brandGoals\": \"Scale UGC ads\"\n}"
+            },
+            "url": "{{baseUrl}}/api/auth/register",
+            "description": "Create a brand account. Sets `status: pending` on brand profile.\n\n**Required:** email, password (min 8), role=`brand`\n\n**Optional:** fullName, companyName, websiteUrl, brandGoals"
+          }
+        },
+        {
+          "name": "Register Creator",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const json = pm.response.json();",
+                  "  pm.collectionVariables.set('token', json.token);",
+                  "  pm.collectionVariables.set('userId', json.user.id);",
+                  "  pm.collectionVariables.set('creatorId', json.user.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"creator@example.com\",\n  \"password\": \"password123\",\n  \"fullName\": \"John Creator\",\n  \"role\": \"creator\",\n  \"portfolioUrl\": \"https://tiktok.com/@creator\",\n  \"bio\": \"UGC specialist\"\n}"
+            },
+            "url": "{{baseUrl}}/api/auth/register",
+            "description": "Create a creator account. Sets `status: pending` on creator profile.\n\n**Required:** email, password (min 8), role=`creator`\n\n**Optional:** fullName, portfolioUrl, bio"
+          }
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const json = pm.response.json();",
+                  "  pm.collectionVariables.set('token', json.token);",
+                  "  pm.collectionVariables.set('userId', json.user.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"brand@example.com\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": "{{baseUrl}}/api/auth/login",
+            "description": "Login with email/password. Returns `{ user, token }`. Token saved to collection variable."
+          }
+        },
+        {
+          "name": "Get Me",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/auth/me",
+            "description": "Get current user + role-specific profile data.\n\n**Auth:** Required\n\nReturns `{ user, roleData }` where roleData is brand or creator fields."
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/api/auth/logout",
+            "description": "Clears auth cookie. Returns `{ ok: true }`."
+          }
+        },
+        {
+          "name": "Setup Admin (Create Account)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "x-admin-seed-secret", "value": "{{adminSeedSecret}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"your-admin@example.com\",\n  \"password\": \"your-secure-password\",\n  \"fullName\": \"Admin\"\n}"
+            },
+            "url": "{{baseUrl}}/api/auth/setup-admin",
+            "description": "Create a new admin account (or reset password for existing email).\n\n**Header:** `x-admin-seed-secret` must match `ADMIN_SEED_SECRET`.\n\n**Required:** email, password (min 8 chars)\n**Optional:** fullName"
+          }
+        },
+        {
+          "name": "Promote to Admin",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "x-admin-seed-secret", "value": "{{adminSeedSecret}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"brand@example.com\"\n}"
+            },
+            "url": "{{baseUrl}}/api/auth/promote-admin",
+            "description": "Promote existing user to admin role.\n\n**Header:** `x-admin-seed-secret` must match `ADMIN_SEED_SECRET` env var."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "Update Profile",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Updated Name\",\n  \"companyName\": \"New Company\",\n  \"websiteUrl\": \"https://newsite.com\",\n  \"portfolioUrl\": \"https://portfolio.com\",\n  \"bio\": \"Updated bio\"\n}"
+            },
+            "url": "{{baseUrl}}/api/users/profile",
+            "description": "Update profile fields based on role.\n\n**Brand:** fullName, companyName, websiteUrl\n**Creator:** fullName, portfolioUrl, bio\n\n**Auth:** Required"
+          }
+        },
+        {
+          "name": "List All Profiles (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/users/profiles",
+            "description": "List all user profiles for admin messaging.\n\n**Auth:** Admin only"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Packages",
+      "description": "Public pricing packages (no auth).",
+      "item": [
+        {
+          "name": "List Packages",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const pkgs = pm.response.json().packages;",
+                  "  if (pkgs && pkgs.length) pm.collectionVariables.set('packageId', pkgs[0].id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/packages",
+            "description": "List all pricing packages sorted by price."
+          }
+        },
+        {
+          "name": "Get Package by ID",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/packages/{{packageId}}",
+            "description": "Get single package details."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Brand",
+      "description": "Brand role routes. Auth + role=brand required.",
+      "item": [
+        {
+          "name": "Get My Brand Profile",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/brands/me",
+            "description": "Get logged-in brand profile including credits and status."
+          }
+        },
+        {
+          "name": "Brand Overview",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/brands/overview",
+            "description": "Dashboard stats: credits, active campaigns, pending deliverables, recent deliverables."
+          }
+        },
+        {
+          "name": "Brand Billing",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/brands/billing",
+            "description": "Credits balance + payment history."
+          }
+        },
+        {
+          "name": "List My Campaigns",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/brands/campaigns",
+            "description": "List brand's campaigns with application/deliverable counts."
+          }
+        },
+        {
+          "name": "Create Campaign",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const c = pm.response.json().campaign;",
+                  "  if (c && c._id) pm.collectionVariables.set('campaignId', c._id);",
+                  "  if (c && c.id) pm.collectionVariables.set('campaignId', c.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Summer Skincare UGC\",\n  \"brief\": \"Looking for 30s TikTok-style review videos.\"\n}"
+            },
+            "url": "{{baseUrl}}/api/brands/campaigns",
+            "description": "Create campaign. Costs **89 credits** (deducted automatically).\n\n**Required:** title\n**Optional:** brief"
+          }
+        },
+        {
+          "name": "Get Campaign Detail",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/brands/campaigns/{{campaignId}}",
+            "description": "Get campaign + deliverables for brand-owned campaign."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Creator",
+      "description": "Creator role routes. Auth + role=creator required.",
+      "item": [
+        {
+          "name": "Creator Overview",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/creators/overview",
+            "description": "Dashboard stats: active assignments, total earnings, pending deliverables."
+          }
+        },
+        {
+          "name": "Browse Campaigns",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/creators/browse",
+            "description": "List active campaigns. Creator must be **approved**."
+          }
+        },
+        {
+          "name": "Apply to Campaign",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"campaignId\": \"{{campaignId}}\"\n}"
+            },
+            "url": "{{baseUrl}}/api/creators/applications",
+            "description": "Apply to a campaign. Creator must be approved. One application per campaign."
+          }
+        },
+        {
+          "name": "List Assignments",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/creators/assignments",
+            "description": "List assigned campaigns with deliverable status."
+          }
+        },
+        {
+          "name": "Get Assignment Detail",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/creators/assignments/{{campaignId}}",
+            "description": "Get single assignment (campaign + deliverable)."
+          }
+        },
+        {
+          "name": "List Earnings",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/creators/earnings",
+            "description": "List creator earnings (created when deliverable approved)."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Campaigns (Admin)",
+      "description": "Admin campaign management.",
+      "item": [
+        {
+          "name": "List All Campaigns",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const camps = pm.response.json().campaigns;",
+                  "  if (camps && camps.length) pm.collectionVariables.set('campaignId', camps[0].id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/campaigns",
+            "description": "List all campaigns with brand info.\n\n**Auth:** Admin only"
+          }
+        },
+        {
+          "name": "Get Campaign Detail",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/campaigns/{{campaignId}}",
+            "description": "Campaign detail with assigned creators and available approved creators."
+          }
+        },
+        {
+          "name": "Assign Creator to Campaign",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"creatorId\": \"{{creatorId}}\"\n}"
+            },
+            "url": "{{baseUrl}}/api/campaigns/{{campaignId}}/assign",
+            "description": "Assign approved creator to campaign."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Deliverables",
+      "item": [
+        {
+          "name": "Review Deliverable (Brand/Admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"approved\",\n  \"feedback\": \"Great work!\"\n}"
+            },
+            "url": "{{baseUrl}}/api/deliverables/{{deliverableId}}/review",
+            "description": "Approve or reject a deliverable.\n\n**status:** `approved` | `rejected`\n**feedback:** optional (shown on reject)\n\n**Auth:** Brand (own campaigns) or Admin\n\nOn approve, creator earnings record is created automatically."
+          }
+        },
+        {
+          "name": "List Submissions (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/deliverables/admin?status=all",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "deliverables", "admin"],
+              "query": [
+                { "key": "status", "value": "all", "description": "all | pending | approved | rejected" }
+              ]
+            },
+            "description": "List all deliverables/submissions.\n\n**Query:** `status` filter (optional)\n\n**Auth:** Admin only"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Brands (Admin)",
+      "item": [
+        {
+          "name": "List All Brands",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const brands = pm.response.json().brands;",
+                  "  if (brands && brands.length) pm.collectionVariables.set('brandId', brands[0].id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/brands",
+            "description": "List all brand applications.\n\n**Auth:** Admin only"
+          }
+        },
+        {
+          "name": "Update Brand Status",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"approved\"\n}"
+            },
+            "url": "{{baseUrl}}/api/brands/{{brandId}}/status",
+            "description": "Approve or reject brand application.\n\n**status:** `approved` | `rejected`\n\n**Auth:** Admin only"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Creators (Admin)",
+      "item": [
+        {
+          "name": "List All Creators",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const creators = pm.response.json().creators;",
+                  "  if (creators && creators.length) pm.collectionVariables.set('creatorId', creators[0].id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/creators",
+            "description": "List all creator applications.\n\n**Auth:** Admin only"
+          }
+        },
+        {
+          "name": "Update Creator Status",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"approved\"\n}"
+            },
+            "url": "{{baseUrl}}/api/creators/{{creatorId}}/status",
+            "description": "Approve or reject creator application.\n\n**status:** `approved` | `rejected`\n\n**Auth:** Admin only"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Payments",
+      "item": [
+        {
+          "name": "List Payments (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/payments/admin",
+            "description": "List all payment records.\n\n**Auth:** Admin only"
+          }
+        },
+        {
+          "name": "Reconcile Checkout",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"brandId\": \"{{brandId}}\",\n  \"packageId\": \"{{packageId}}\",\n  \"paymentIntentId\": \"pi_test_123456\",\n  \"amount\": 267\n}"
+            },
+            "url": "{{baseUrl}}/api/payments/reconcile",
+            "description": "Idempotent credit top-up after Stripe checkout (called from Next.js frontend).\n\n**Required:** brandId, packageId, paymentIntentId\n**Optional:** amount"
+          }
+        },
+        {
+          "name": "Webhook Complete (Internal)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "x-internal-secret", "value": "{{jwtSecret}}", "description": "Must match JWT_SECRET" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"brandId\": \"{{brandId}}\",\n  \"packageId\": \"{{packageId}}\",\n  \"paymentIntentId\": \"pi_test_123456\"\n}"
+            },
+            "url": "{{baseUrl}}/api/payments/webhook-complete",
+            "description": "Internal endpoint for Stripe webhook handler.\n\n**Header:** `x-internal-secret` = JWT_SECRET env var"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin Dashboard",
+      "item": [
+        {
+          "name": "Admin Overview",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/admin/overview",
+            "description": "Admin dashboard stats + recent payments + pending creators."
+          }
+        },
+        {
+          "name": "Admin Analytics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/admin/analytics",
+            "description": "Aggregate counts: pending creators/brands, campaigns, deliverables, revenue."
+          }
+        }
+      ]
+    }
+  ]
+}

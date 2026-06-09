@@ -1,21 +1,12 @@
-import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { redirect } from 'next/navigation';
+import { cookies } from 'next/headers';
+import { verifyJwtToken } from '@/lib/auth/jwt';
 
 export default async function DashboardIndex() {
-  const supabase = await createClient()
+  const cookieStore = await cookies();
+  const token = cookieStore.get('token')?.value;
+  const user = token ? await verifyJwtToken(token) : null;
 
-  const { data: userData } = await supabase.auth.getUser()
-  const user = userData?.user
-  if (!user) redirect('/login')
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single()
-
-  const role =
-    ((profile as any)?.role as string | undefined) ??
-    ((user as any)?.user_metadata?.role as string | undefined)
-  redirect(role ? `/dashboard/${role}` : '/dashboard/creator')
+  if (!user) redirect('/login');
+  redirect(`/dashboard/${user.role}`);
 }

@@ -1,64 +1,57 @@
 'use client';
 
 import DashboardLayout from '@/components/DashboardLayout';
-import { createClient } from '@/lib/supabase/client';
+import CampaignBriefDetails from '@/components/CampaignBriefDetails';
+import { getBrandCampaign, reviewDeliverable } from '@/lib/api';
+import { ApiError } from '@/lib/api/client';
+import { toast } from '@/lib/toast';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, CheckCircle2, Clock, CreditCard, LayoutDashboard, Settings, Video, XCircle } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
+import { ArrowLeft, CheckCircle2, Clock, ExternalLink, Users, XCircle } from 'lucide-react';
 
-type Campaign = any;
-type DeliverableRow = any;
+function mapDeliverable(d: any) {
+  return {
+    ...d,
+    id: d.id ?? d._id?.toString(),
+    created_at: d.created_at ?? d.createdAt,
+    creators: d.creators ?? null,
+  };
+}
 
 export default function BrandCampaignDetailPage() {
   const params = useParams<{ id: string }>();
   const id = params?.id;
 
-  const supabase = useMemo(() => createClient(), []);
   const [loading, setLoading] = useState(true);
-  const [campaign, setCampaign] = useState<Campaign | null>(null);
-  const [deliverables, setDeliverables] = useState<DeliverableRow[]>([]);
+  const [campaign, setCampaign] = useState<any>(null);
+  const [deliverables, setDeliverables] = useState<any[]>([]);
+  const [applications, setApplications] = useState<any[]>([]);
   const [reviewingId, setReviewingId] = useState<string | null>(null);
 
-  const sidebarItems = [
-    { label: 'Overview', icon: LayoutDashboard, href: '/dashboard/brand' },
-    { label: 'My Campaigns', icon: Video, href: '/dashboard/brand/campaigns' },
-    { label: 'Billing', icon: CreditCard, href: '/dashboard/brand/billing' },
-    { label: 'Settings', icon: Settings, href: '/dashboard/settings' },
-  ];
-
   const fetchData = useCallback(async () => {
-    if (!supabase) return;
     if (!id) return;
     setLoading(true);
 
-    const [{ data: campaignData, error: campaignError }, { data: deliverablesData, error: deliverablesError }] =
-      await Promise.all([
-        supabase.from('campaigns').select('*').eq('id', id).single(),
-        supabase
-          .from('deliverables')
-          .select('*, creators(id, profiles(full_name, email))')
-          .eq('campaign_id', id)
-          .order('created_at', { ascending: false }),
-      ]);
-
-    if (campaignError) alert(campaignError.message);
-    setCampaign(campaignData ?? null);
-
-    if (deliverablesError) alert(deliverablesError.message);
-    setDeliverables(deliverablesData ?? []);
-
-    setLoading(false);
-  }, [id, supabase]);
+    try {
+      const data = await getBrandCampaign(id);
+      const c = data.campaign;
+      setCampaign(c ? { ...c, id: c.id ?? c._id?.toString() } : null);
+      setDeliverables((data.deliverables ?? []).map(mapDeliverable));
+      setApplications(data.applications ?? []);
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Failed to load campaign');
+    } finally {
+      setLoading(false);
+    }
+  }, [id]);
 
   useEffect(() => {
-    if (!supabase) return;
     fetchData();
-  }, [fetchData, supabase]);
+  }, [fetchData]);
 
   const handleReview = useCallback(
     async (deliverableId: string, status: 'approved' | 'rejected') => {
-      if (!supabase) return;
       if (!id || !campaign) return;
 
       const feedback =
@@ -67,57 +60,43 @@ export default function BrandCampaignDetailPage() {
           : undefined;
 
       setReviewingId(deliverableId);
-      const { error } = await supabase.from('deliverables').update({ status, feedback }).eq('id', deliverableId);
+      try {
+        await reviewDeliverable(deliverableId, status, feedback);
 
-      if (error) {
-        alert(error.message);
+        const deliverable = deliverables.find((d) => d.id === deliverableId);
+        const creatorEmail = deliverable?.creators?.profiles?.email;
+        const creatorName = deliverable?.creators?.profiles?.full_name;
+
+        if (creatorEmail) {
+          await fetch('/api/notifications', {
+            method: 'POST',
+            body: JSON.stringify({
+              type: 'DELIVERABLE_REVIEWED',
+              data: {
+                creatorEmail,
+                creatorName,
+                campaignTitle: campaign.title,
+                status,
+                feedback,
+                campaignId: id,
+              },
+            }),
+          });
+        }
+
+        toast.success(status === 'approved' ? 'Deliverable approved' : 'Deliverable rejected');
+        fetchData();
+      } catch (err) {
+        toast.error(err instanceof ApiError ? err.message : 'Review failed');
+      } finally {
         setReviewingId(null);
-        return;
       }
-
-      const deliverable = deliverables.find((d) => d.id === deliverableId);
-      const creatorEmail = deliverable?.creators?.profiles?.email;
-      const creatorName = deliverable?.creators?.profiles?.full_name;
-
-      if (creatorEmail) {
-        await fetch('/api/notifications', {
-          method: 'POST',
-          body: JSON.stringify({
-            type: 'DELIVERABLE_REVIEWED',
-            data: {
-              creatorEmail,
-              creatorName,
-              campaignTitle: campaign.title,
-              status,
-              feedback,
-              campaignId: id,
-            },
-          }),
-        });
-      }
-
-      setReviewingId(null);
-      fetchData();
     },
-    [campaign, deliverables, fetchData, id, supabase]
+    [campaign, deliverables, fetchData, id]
   );
 
-  if (!supabase) {
-    return (
-      <DashboardLayout role="Brand" items={sidebarItems}>
-        <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
-          <div className="text-gray-900 font-bold mb-1">Missing Supabase env</div>
-          <div className="text-sm text-gray-500">
-            Set <code className="font-mono">NEXT_PUBLIC_SUPABASE_URL</code> and{' '}
-            <code className="font-mono">NEXT_PUBLIC_SUPABASE_ANON_KEY</code> to use this page.
-          </div>
-        </div>
-      </DashboardLayout>
-    );
-  }
-
   return (
-    <DashboardLayout role="Brand" items={sidebarItems}>
+    <DashboardLayout role="Brand" navRole="brand">
       <div className="mb-6">
         <Link
           href="/dashboard/brand/campaigns"
@@ -128,26 +107,63 @@ export default function BrandCampaignDetailPage() {
         </Link>
       </div>
 
-      <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+      <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm space-y-8">
         {loading ? (
           <div className="text-gray-400">Loading...</div>
         ) : !campaign ? (
           <div className="text-gray-500">Campaign not found.</div>
         ) : (
           <>
-            <div className="mb-6">
-              <h1 className="text-2xl font-bold text-gray-900">{campaign.title}</h1>
-              {campaign.brief ? <p className="text-gray-600 mt-2 whitespace-pre-wrap">{campaign.brief}</p> : null}
-            </div>
+            <CampaignBriefDetails campaign={campaign} showTitle />
 
-            <div className="border-t border-gray-100 pt-6">
+            <section>
+              <div className="flex items-center gap-2 mb-4">
+                <Users size={18} className="text-indigo-600" />
+                <h2 className="text-sm font-bold text-gray-900">Creator sourcing</h2>
+                <span className="text-xs text-gray-500">({applications.length})</span>
+              </div>
+              {applications.length === 0 ? (
+                <div className="text-gray-400 italic text-sm">
+                  Our team is sourcing vetted creators for your brief. You&apos;ll see matched creators here once assigned.
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {applications.map((app) => (
+                    <div key={app.id} className="p-4 rounded-xl border border-gray-100 flex justify-between items-center">
+                      <div>
+                        <div className="font-medium text-gray-900">{app.creators?.profiles?.full_name ?? 'Creator'}</div>
+                        <div className="text-xs text-gray-500">{app.creators?.profiles?.email ?? '—'}</div>
+                        {app.creators?.profiles?.portfolio_url ? (
+                          <a
+                            href={app.creators.profiles.portfolio_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-indigo-600 hover:underline inline-flex items-center gap-1 mt-1"
+                          >
+                            View portfolio <ExternalLink size={12} />
+                          </a>
+                        ) : null}
+                      </div>
+                      <span className="text-[10px] font-bold uppercase px-2 py-1 rounded-full bg-orange-50 text-orange-600">
+                        {app.status}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <p className="text-xs text-gray-500 mt-3">
+                UGCFlow manages creator matching and briefing — you review finished video ads below.
+              </p>
+            </section>
+
+            <section>
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-sm font-bold text-gray-900">Deliverables</h2>
+                <h2 className="text-sm font-bold text-gray-900">Video deliverables</h2>
                 <div className="text-xs text-gray-500">{deliverables.length} total</div>
               </div>
 
               {deliverables.length === 0 ? (
-                <div className="text-gray-400 italic">No deliverables submitted yet.</div>
+                <div className="text-gray-400 italic text-sm">No deliverables submitted yet.</div>
               ) : (
                 <div className="space-y-3">
                   {deliverables.map((d) => (
@@ -160,12 +176,22 @@ export default function BrandCampaignDetailPage() {
                           {d.creators?.profiles?.full_name ?? 'Creator'}
                         </div>
                         <div className="text-xs text-gray-500 truncate">{d.creators?.profiles?.email ?? '—'}</div>
+                        {d.fileUrl ? (
+                          <a
+                            href={d.fileUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-indigo-600 hover:underline inline-flex items-center gap-1 mt-2 break-all"
+                          >
+                            View submission <ExternalLink size={12} />
+                          </a>
+                        ) : null}
                         <div className="text-xs text-gray-500 mt-1">
                           Submitted: {d.created_at ? new Date(d.created_at).toLocaleString() : '—'}
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <span
                           className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
                             d.status === 'approved'
@@ -200,7 +226,7 @@ export default function BrandCampaignDetailPage() {
                   ))}
                 </div>
               )}
-            </div>
+            </section>
           </>
         )}
       </div>

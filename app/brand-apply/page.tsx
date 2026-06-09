@@ -1,21 +1,18 @@
 'use client';
 import Navbar from '@/components/Navbar';
+import Link from 'next/link';
 import { useState } from 'react';
-import { createClient } from '@/lib/supabase/client';
+import { applyBrand } from '@/lib/api/auth';
+import { ApiError } from '@/lib/api/client';
+import { toast } from '@/lib/toast';
 
 export default function BrandApply() {
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  const supabase = createClient();
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
-    
-    if (!supabase) {
-      alert('App configuration error: Supabase environment variables are missing.');
-      return;
-    }
 
     const formData = new FormData(e.currentTarget);
     const email = formData.get('email') as string;
@@ -27,44 +24,31 @@ export default function BrandApply() {
     const passwordConfirm = formData.get('passwordConfirm') as string;
 
     if (password !== passwordConfirm) {
-      alert('Passwords do not match.');
+      toast.error('Passwords do not match.');
       setLoading(false);
       return;
     }
     if (password.length < 8) {
-      alert('Password must be at least 8 characters.');
+      toast.error('Password must be at least 8 characters.');
       setLoading(false);
       return;
     }
 
-    // Application fields are copied into brands via DB trigger from user metadata (works with email confirmation).
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          full_name: fullName,
-          role: 'brand',
-          company_name: companyName,
-          website_url: websiteUrl,
-          brand_goals: brandGoals,
-        },
-      },
-    });
-
-    if (authError) {
-      alert(authError.message);
+    try {
+      await applyBrand({
+        email,
+        password,
+        fullName,
+        companyName,
+        websiteUrl,
+        brandGoals,
+      });
+      setSubmitted(true);
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Registration failed');
+    } finally {
       setLoading(false);
-      return;
     }
-
-    // Do not PATCH public.brands here.
-    // On a fresh Supabase project this table might not exist yet, which causes:
-    // "Could not find the table 'public.brands' in the schema cache".
-    // The DB trigger (handle_new_user) is responsible for creating/updating role tables.
-
-    setLoading(false);
-    setSubmitted(true);
   };
 
   if (submitted) {
@@ -73,11 +57,21 @@ export default function BrandApply() {
         <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 max-w-md text-center">
           <h1 className="text-2xl font-bold mb-4">Application Received!</h1>
           <p className="text-gray-600 mb-6">
-            We've received your application. Our team will review your brand and get back to you shortly.
+            We&apos;ve received your application. An admin will review it and approve or reject your account.
+            You&apos;ll be able to log in once your application is approved.
           </p>
-          <button onClick={() => window.location.href = '/'} className="w-full py-3 bg-indigo-600 text-white rounded-lg font-bold">
+          <Link
+            href="/"
+            className="block w-full py-3 bg-indigo-600 text-white rounded-lg font-bold hover:bg-indigo-700 transition-colors"
+          >
             Back to Home
-          </button>
+          </Link>
+          <p className="text-sm text-gray-500 mt-4">
+            Already approved?{' '}
+            <Link href="/login?role=brand" className="text-indigo-600 font-semibold hover:underline">
+              Brand login
+            </Link>
+          </p>
         </div>
       </div>
     );
@@ -89,8 +83,8 @@ export default function BrandApply() {
       <div className="pt-32 pb-20 px-6 max-w-2xl mx-auto">
         <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
           <h1 className="text-3xl font-bold mb-2">Work with UGCFlow</h1>
-          <p className="text-gray-600 mb-8">Tell us about your brand and we'll help you scale your content.</p>
-          
+          <p className="text-gray-600 mb-8">Tell us about your brand and we&apos;ll help you scale your content.</p>
+
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
@@ -112,9 +106,9 @@ export default function BrandApply() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">About the brand and brand goals</label>
-              <textarea 
-                name="brandGoals" 
-                required 
+              <textarea
+                name="brandGoals"
+                required
                 placeholder="Tell us about your brand, what you sell, and what you hope to achieve with UGC..."
                 className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none h-32"
               ></textarea>

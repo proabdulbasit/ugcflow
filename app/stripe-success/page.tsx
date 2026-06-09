@@ -64,11 +64,11 @@ export default async function SuccessPage({
 
         <div className="mt-10">
           <Link
-            href="/"
+            href="/dashboard/brand/billing"
             className="inline-flex items-center justify-center rounded-md px-5 py-2.5 text-white transition-opacity"
             style={{ backgroundColor: accent }}
           >
-            Back to Home
+            Back to Billing
           </Link>
         </div>
       </div>

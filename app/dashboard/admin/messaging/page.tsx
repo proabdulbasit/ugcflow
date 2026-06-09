@@ -1,13 +1,22 @@
 'use client';
 import DashboardLayout from '@/components/DashboardLayout';
-import { createClient } from '@/lib/supabase/client';
-import { CreditCard, LayoutDashboard, MessageSquare, Search, Send, Settings, TrendingUp, Users, Video } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { getAdminProfiles } from '@/lib/api';
+import { ApiError } from '@/lib/api/client';
+import { toast } from '@/lib/toast';
+import { Search, Send } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
 
 type ProfileRow = any;
 
+function mapProfile(p: any): ProfileRow {
+  return {
+    ...p,
+    full_name: p.full_name ?? p.fullName,
+    created_at: p.created_at ?? p.createdAt,
+  };
+}
+
 export default function AdminMessagingPage() {
-  const supabase = useMemo(() => createClient(), []);
   const [profiles, setProfiles] = useState<ProfileRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
@@ -16,30 +25,17 @@ export default function AdminMessagingPage() {
   const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
 
-  const sidebarItems = [
-    { label: 'Overview', icon: LayoutDashboard, href: '/dashboard/admin' },
-    { label: 'Analytics', icon: TrendingUp, href: '/dashboard/admin/analytics' },
-    { label: 'Creators', icon: Users, href: '/dashboard/admin/creators' },
-    { label: 'Brands', icon: Users, href: '/dashboard/admin/brands' },
-    { label: 'Campaigns', icon: Video, href: '/dashboard/admin/campaigns' },
-    { label: 'Submissions', icon: Video, href: '/dashboard/admin/submissions' },
-    { label: 'Messaging', icon: MessageSquare, href: '/dashboard/admin/messaging' },
-    { label: 'Payments', icon: CreditCard, href: '/dashboard/admin/payments' },
-    { label: 'Settings', icon: Settings, href: '/dashboard/settings' },
-  ];
-
   const fetchProfiles = useCallback(async () => {
-    if (!supabase) return;
     setLoading(true);
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('id, email, full_name, role, created_at')
-      .order('created_at', { ascending: false })
-      .limit(200);
-    if (error) alert(error.message);
-    setProfiles((data ?? []) as any);
-    setLoading(false);
-  }, [supabase]);
+    try {
+      const { profiles: data } = await getAdminProfiles();
+      setProfiles(data.map(mapProfile));
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Failed to load users');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     fetchProfiles();
@@ -72,11 +68,11 @@ export default function AdminMessagingPage() {
       });
       if (!res.ok) {
         const json = await res.json().catch(() => null);
-        alert(json?.error ?? 'Failed to send message.');
+        toast.error(json?.error ?? 'Failed to send message.');
       } else {
         setSubject('');
         setMessage('');
-        alert('Message queued (see server logs).');
+        toast.success('Message sent successfully');
       }
     } finally {
       setSending(false);
@@ -84,7 +80,7 @@ export default function AdminMessagingPage() {
   };
 
   return (
-    <DashboardLayout role="Admin" items={sidebarItems}>
+    <DashboardLayout role="Admin" navRole="admin">
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-900">Messaging</h1>
         <p className="text-gray-500 text-sm">Send a direct message to a brand or creator (currently logged via `/api/notifications`).</p>
@@ -185,4 +181,3 @@ export default function AdminMessagingPage() {
     </DashboardLayout>
   );
 }
-

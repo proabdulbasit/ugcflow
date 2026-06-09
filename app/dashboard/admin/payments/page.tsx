@@ -2,38 +2,34 @@
 import DashboardLayout from '@/components/DashboardLayout';
 import { CreditCard, LayoutDashboard, Search, Settings, Users, Video } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { createClient } from '@/lib/supabase/client';
+import { getAdminPayments } from '@/lib/api';
+import { ApiError } from '@/lib/api/client';
+import { toast } from '@/lib/toast';
 
 export default function AdminPaymentsPage() {
   const [payments, setPayments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
-  const supabase = createClient();
 
   useEffect(() => {
     const fetchPayments = async () => {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('payments')
-        .select('*, brands(company_name), packages(name)')
-        .order('created_at', { ascending: false })
-        .limit(200);
-      if (error) alert(error.message);
-      setPayments(data ?? []);
-      setLoading(false);
+      try {
+        const { payments: data } = await getAdminPayments();
+        setPayments(
+          data.map((p: any) => ({
+            ...p,
+            created_at: p.created_at ?? p.createdAt,
+          }))
+        );
+      } catch (err) {
+        toast.error(err instanceof ApiError ? err.message : 'Failed to load payments');
+      } finally {
+        setLoading(false);
+      }
     };
     fetchPayments();
   }, []);
-
-  const sidebarItems = [
-    { label: 'Overview', icon: LayoutDashboard, href: '/dashboard/admin' },
-    { label: 'Creators', icon: Users, href: '/dashboard/admin/creators' },
-    { label: 'Brands', icon: Users, href: '/dashboard/admin/brands' },
-    { label: 'Campaigns', icon: Video, href: '/dashboard/admin/campaigns' },
-    { label: 'Submissions', icon: Video, href: '/dashboard/admin/submissions' },
-    { label: 'Payments', icon: CreditCard, href: '/dashboard/admin/payments' },
-    { label: 'Settings', icon: Settings, href: '/dashboard/settings' },
-  ];
 
   const filtered = payments.filter((p: any) => {
     const q = query.trim().toLowerCase();
@@ -60,7 +56,7 @@ export default function AdminPaymentsPage() {
   );
 
   return (
-    <DashboardLayout role="Admin" items={sidebarItems}>
+    <DashboardLayout role="Admin" navRole="admin">
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-900">Payments</h1>
         <p className="text-gray-500 text-sm">View payments created from Stripe checkout + internal records.</p>
