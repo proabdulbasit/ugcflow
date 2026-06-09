@@ -3,6 +3,7 @@ import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import { connectDb } from './config/db.js';
+import { corsOptions } from './config/cors.js';
 import authRoutes from './routes/auth.js';
 import userRoutes from './routes/users.js';
 import brandRoutes from './routes/brands.js';
@@ -15,17 +16,11 @@ import adminRoutes from './routes/admin.js';
 
 const PORT = Number(process.env.PORT) || 4000;
 const MONGODB_URI = process.env.MONGODB_URI;
-const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 
 const app = express();
 let dbReady = false;
 
-app.use(
-  cors({
-    origin: FRONTEND_URL,
-    credentials: true,
-  })
-);
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(cookieParser());
 

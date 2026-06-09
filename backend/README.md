@@ -49,7 +49,8 @@ npm run dev           # terminal 2 — frontend (project root)
 |----------|-------------|
 | `MONGODB_URI` | MongoDB Atlas connection string |
 | `JWT_SECRET` | Must match root `.env` `JWT_SECRET` |
-| `FRONTEND_URL` | CORS origin (default `http://localhost:3000`) |
+| `FRONTEND_URL` | Primary frontend URL; comma-separated for multiple origins |
+| `FRONTEND_URLS` | Optional override for allowed CORS origins (comma-separated) |
 | `ADMIN_SEED_SECRET` | Must match root `.env` (admin promote route) |
 | `ADMIN_EMAIL` / `ADMIN_PASSWORD` | Used by `npm run seed:admin` only |
 
