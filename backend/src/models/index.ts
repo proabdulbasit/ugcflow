@@ -33,6 +33,7 @@ export interface IBrand {
   brandGoals?: string;
   status: ApplicationStatus;
   credits: number;
+  termsAcceptedAt?: Date;
   createdAt: Date;
 }
 
@@ -44,6 +45,7 @@ const brandSchema = new mongoose.Schema<IBrand>(
     brandGoals: String,
     status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
     credits: { type: Number, default: 0 },
+    termsAcceptedAt: Date,
   },
   { timestamps: { createdAt: true, updatedAt: false } }
 );
@@ -54,7 +56,9 @@ export interface ICreator {
   _id: mongoose.Types.ObjectId;
   portfolioUrl?: string;
   bio?: string;
+  address?: string;
   status: ApplicationStatus;
+  termsAcceptedAt?: Date;
   createdAt: Date;
 }
 
@@ -63,7 +67,9 @@ const creatorSchema = new mongoose.Schema<ICreator>(
     _id: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     portfolioUrl: String,
     bio: String,
+    address: String,
     status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
+    termsAcceptedAt: Date,
   },
   { timestamps: { createdAt: true, updatedAt: false } }
 );

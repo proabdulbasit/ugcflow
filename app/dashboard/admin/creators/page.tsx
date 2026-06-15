@@ -18,6 +18,7 @@ function mapCreator(c: any): CreatorRow {
           email: c.profiles.email,
         }
       : null,
+    address: c.address,
   };
 }
 
@@ -61,7 +62,8 @@ export default function AdminCreatorsPage() {
     const name = (c.profiles?.full_name ?? '').toLowerCase();
     const email = (c.profiles?.email ?? '').toLowerCase();
     const status = (c.status ?? '').toLowerCase();
-    return name.includes(q) || email.includes(q) || status.includes(q);
+    const address = (c.address ?? '').toLowerCase();
+    return name.includes(q) || email.includes(q) || status.includes(q) || address.includes(q);
   });
 
   const statusBadge = (status: string) => (
@@ -105,10 +107,11 @@ export default function AdminCreatorsPage() {
 
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left min-w-[720px]">
+          <table className="w-full text-left min-w-[920px]">
           <thead>
             <tr className="bg-gray-50 text-gray-500 text-xs font-bold uppercase tracking-wider">
               <th className="px-6 py-4">Creator</th>
+              <th className="px-6 py-4">Address</th>
               <th className="px-6 py-4">Status</th>
               <th className="px-6 py-4">Applied</th>
               <th className="px-6 py-4 text-right">Actions</th>
@@ -117,13 +120,13 @@ export default function AdminCreatorsPage() {
           <tbody className="divide-y divide-gray-50">
             {loading ? (
               <tr>
-                <td colSpan={4} className="px-6 py-10 text-center text-gray-400">
+                <td colSpan={5} className="px-6 py-10 text-center text-gray-400">
                   Loading creators…
                 </td>
               </tr>
             ) : filtered.length === 0 ? (
               <tr>
-                <td colSpan={4} className="px-6 py-10 text-center text-gray-400 italic">
+                <td colSpan={5} className="px-6 py-10 text-center text-gray-400 italic">
                   No creators found.
                 </td>
               </tr>
@@ -133,6 +136,9 @@ export default function AdminCreatorsPage() {
                   <td className="px-6 py-4">
                     <div className="font-bold text-gray-900">{c.profiles?.full_name ?? 'Unnamed creator'}</div>
                     <div className="text-xs text-gray-500">{c.profiles?.email ?? '—'}</div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="text-sm text-gray-700 max-w-xs whitespace-pre-wrap">{c.address || '—'}</div>
                   </td>
                   <td className="px-6 py-4">{statusBadge(c.status ?? 'pending')}</td>
                   <td className="px-6 py-4">

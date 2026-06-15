@@ -62,6 +62,7 @@ router.get('/:id', requireAuth, requireRole('admin'), async (req, res) => {
         applicationStatus: app.status,
         isAssigned: assignedIds.has(app.creatorId.toString()),
         status: creator?.status,
+        address: creator?.address,
         profiles: profile ? { fullName: profile.fullName, email: profile.email } : null,
       };
     })
@@ -84,6 +85,7 @@ router.get('/:id', requireAuth, requireRole('admin'), async (req, res) => {
   const assignedCreators = await Promise.all(
     assignedLinks.map(async (link) => {
       const profile = await User.findById(link.creatorId);
+      const creatorProfile = await Creator.findById(link.creatorId);
       const deliverable = await Deliverable.findOne({
         campaignId: campaign._id,
         creatorId: link.creatorId,
@@ -91,6 +93,7 @@ router.get('/:id', requireAuth, requireRole('admin'), async (req, res) => {
       return {
         id: link.creatorId.toString(),
         assignedAt: link.assignedAt,
+        address: creatorProfile?.address,
         profiles: profile ? { fullName: profile.fullName, email: profile.email } : null,
         deliverable: deliverable
           ? { id: deliverable._id.toString(), status: deliverable.status, fileUrl: deliverable.fileUrl }

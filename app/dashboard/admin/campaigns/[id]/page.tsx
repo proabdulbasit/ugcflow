@@ -13,6 +13,7 @@ import { ArrowLeft, CheckCircle2 } from 'lucide-react';
 function mapCreator(c: any) {
   return {
     ...c,
+    address: c.address,
     profiles: c.profiles
       ? {
           full_name: c.profiles.full_name ?? c.profiles.fullName,
@@ -161,6 +162,9 @@ export default function AdminCampaignDetailPage() {
                       <div>
                         <div className="font-medium text-gray-900">{creator.profiles?.full_name ?? 'Unnamed creator'}</div>
                         <div className="text-xs text-gray-500">{creator.profiles?.email ?? '—'}</div>
+                        {creator.address ? (
+                          <div className="text-xs text-gray-600 mt-1 whitespace-pre-wrap">{creator.address}</div>
+                        ) : null}
                         <div className="text-[10px] font-bold uppercase text-indigo-600 mt-1">Applied</div>
                       </div>
                       {renderAssignButton(creator)}
@@ -181,6 +185,9 @@ export default function AdminCampaignDetailPage() {
                       <div>
                         <div className="font-medium text-gray-900">{creator.profiles?.full_name ?? 'Unnamed creator'}</div>
                         <div className="text-xs text-gray-500">{creator.profiles?.email ?? '—'}</div>
+                        {creator.address ? (
+                          <div className="text-xs text-gray-600 mt-1 whitespace-pre-wrap">{creator.address}</div>
+                        ) : null}
                       </div>
                       <div className="text-xs text-gray-500">
                         {creator.deliverable

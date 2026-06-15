@@ -172,6 +172,7 @@ router.get('/', requireAuth, requireRole('admin'), async (_req, res) => {
         id: c._id.toString(),
         portfolioUrl: c.portfolioUrl,
         bio: c.bio,
+        address: c.address,
         status: c.status,
         createdAt: c.createdAt,
         profiles: profile

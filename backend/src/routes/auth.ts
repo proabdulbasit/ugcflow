@@ -28,7 +28,7 @@ function setAuthCookie(res: import('express').Response, token: string) {
 
 router.post('/register', async (req, res) => {
   try {
-    const { email, password, fullName, role, companyName, websiteUrl, brandGoals, portfolioUrl, bio } =
+    const { email, password, fullName, role, companyName, websiteUrl, brandGoals, portfolioUrl, bio, address, termsAccepted } =
       req.body as {
         email: string;
         password: string;
@@ -39,10 +39,15 @@ router.post('/register', async (req, res) => {
         brandGoals?: string;
         portfolioUrl?: string;
         bio?: string;
+        address?: string;
+        termsAccepted?: boolean;
       };
 
     if (!email || !password || !role) {
       return res.status(400).json({ error: 'email, password, and role are required' });
+    }
+    if (!termsAccepted) {
+      return res.status(400).json({ error: 'You must accept the Terms & Conditions to register' });
     }
     if (!['brand', 'creator'].includes(role)) {
       return res.status(400).json({ error: 'role must be brand or creator' });
@@ -50,11 +55,15 @@ router.post('/register', async (req, res) => {
     if (password.length < 8) {
       return res.status(400).json({ error: 'Password must be at least 8 characters' });
     }
+    if (role === 'creator' && !address?.trim()) {
+      return res.status(400).json({ error: 'Mailing address is required for creators' });
+    }
 
     const existing = await User.findOne({ email: email.toLowerCase().trim() });
     if (existing) return res.status(409).json({ error: 'Email already registered' });
 
     const passwordHash = await bcrypt.hash(password, 12);
+    const termsAcceptedAt = new Date();
     const user = await User.create({
       email: email.toLowerCase().trim(),
       passwordHash,
@@ -70,13 +79,16 @@ router.post('/register', async (req, res) => {
         brandGoals: brandGoals?.trim(),
         status: 'pending',
         credits: 0,
+        termsAcceptedAt,
       });
     } else {
       await Creator.create({
         _id: user._id,
         portfolioUrl: portfolioUrl?.trim(),
         bio: bio?.trim(),
+        address: address?.trim(),
         status: 'pending',
+        termsAcceptedAt,
       });
     }
 
@@ -177,6 +189,7 @@ router.get('/me', requireAuth, async (req, res) => {
       ? {
           portfolioUrl: creator.portfolioUrl,
           bio: creator.bio,
+          address: creator.address,
           status: creator.status,
         }
       : null;

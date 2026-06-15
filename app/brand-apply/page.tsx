@@ -1,14 +1,17 @@
 'use client';
 import Navbar from '@/components/Navbar';
+import TermsAcceptance from '@/components/TermsAcceptance';
 import Link from 'next/link';
 import { useState } from 'react';
 import { applyBrand } from '@/lib/api/auth';
 import { ApiError } from '@/lib/api/client';
+import { BRAND_TERMS } from '@/lib/terms/brand-terms';
 import { toast } from '@/lib/toast';
 
 export default function BrandApply() {
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -23,6 +26,11 @@ export default function BrandApply() {
     const password = formData.get('password') as string;
     const passwordConfirm = formData.get('passwordConfirm') as string;
 
+    if (!termsAccepted) {
+      toast.error('Please read and accept the Brand Terms & Conditions.');
+      setLoading(false);
+      return;
+    }
     if (password !== passwordConfirm) {
       toast.error('Passwords do not match.');
       setLoading(false);
@@ -42,6 +50,7 @@ export default function BrandApply() {
         companyName,
         websiteUrl,
         brandGoals,
+        termsAccepted: true,
       });
       setSubmitted(true);
     } catch (err) {
@@ -138,6 +147,15 @@ export default function BrandApply() {
                 />
               </div>
             </div>
+
+            <TermsAcceptance
+              title={BRAND_TERMS.title}
+              intro={BRAND_TERMS.intro}
+              sections={BRAND_TERMS.sections}
+              accepted={termsAccepted}
+              onAcceptedChange={setTermsAccepted}
+            />
+
             <button disabled={loading} type="submit" className="w-full py-4 bg-indigo-600 text-white rounded-lg font-bold hover:bg-indigo-700 transition-colors disabled:opacity-50">
               {loading ? 'Submitting...' : 'Submit Application'}
             </button>

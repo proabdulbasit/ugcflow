@@ -133,6 +133,11 @@ export default function BrandCampaignDetailPage() {
                       <div>
                         <div className="font-medium text-gray-900">{app.creators?.profiles?.full_name ?? 'Creator'}</div>
                         <div className="text-xs text-gray-500">{app.creators?.profiles?.email ?? '—'}</div>
+                        {app.creators?.profiles?.address ? (
+                          <div className="text-xs text-gray-600 mt-1 whitespace-pre-wrap">
+                            {app.creators.profiles.address}
+                          </div>
+                        ) : null}
                         {app.creators?.profiles?.portfolio_url ? (
                           <a
                             href={app.creators.profiles.portfolio_url}

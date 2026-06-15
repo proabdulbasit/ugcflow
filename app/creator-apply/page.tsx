@@ -1,14 +1,17 @@
 'use client';
 import Navbar from '@/components/Navbar';
+import TermsAcceptance from '@/components/TermsAcceptance';
 import Link from 'next/link';
 import { useState } from 'react';
 import { applyCreator } from '@/lib/api/auth';
 import { ApiError } from '@/lib/api/client';
+import { CREATOR_TERMS } from '@/lib/terms/creator-terms';
 import { toast } from '@/lib/toast';
 
 export default function CreatorApply() {
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -19,9 +22,15 @@ export default function CreatorApply() {
     const fullName = formData.get('fullName') as string;
     const portfolioUrl = formData.get('portfolioUrl') as string;
     const bio = formData.get('bio') as string;
+    const address = formData.get('address') as string;
     const password = formData.get('password') as string;
     const passwordConfirm = formData.get('passwordConfirm') as string;
 
+    if (!termsAccepted) {
+      toast.error('Please read and accept the Creator Terms & Conditions.');
+      setLoading(false);
+      return;
+    }
     if (password !== passwordConfirm) {
       toast.error('Passwords do not match.');
       setLoading(false);
@@ -29,6 +38,11 @@ export default function CreatorApply() {
     }
     if (password.length < 8) {
       toast.error('Password must be at least 8 characters.');
+      setLoading(false);
+      return;
+    }
+    if (!address.trim()) {
+      toast.error('Mailing address is required.');
       setLoading(false);
       return;
     }
@@ -40,6 +54,8 @@ export default function CreatorApply() {
         fullName,
         portfolioUrl,
         bio,
+        address,
+        termsAccepted: true,
       });
       setSubmitted(true);
     } catch (err) {
@@ -99,6 +115,16 @@ export default function CreatorApply() {
               <input name="portfolioUrl" required type="url" className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="https://tiktok.com/@username" />
             </div>
             <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Mailing Address</label>
+              <textarea
+                name="address"
+                required
+                placeholder="Street address, city, state/province, postal code, country"
+                className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none h-24"
+              />
+              <p className="text-xs text-gray-500 mt-1">Used for product shipments on physical product campaigns.</p>
+            </div>
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Short Bio</label>
               <textarea
                 name="bio"
@@ -132,6 +158,15 @@ export default function CreatorApply() {
                 />
               </div>
             </div>
+
+            <TermsAcceptance
+              title={CREATOR_TERMS.title}
+              intro={CREATOR_TERMS.intro}
+              sections={CREATOR_TERMS.sections}
+              accepted={termsAccepted}
+              onAcceptedChange={setTermsAccepted}
+            />
+
             <button disabled={loading} type="submit" className="w-full py-4 bg-indigo-600 text-white rounded-lg font-bold hover:bg-indigo-700 transition-colors disabled:opacity-50">
               {loading ? 'Submitting...' : 'Apply as Creator'}
             </button>

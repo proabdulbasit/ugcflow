@@ -1,6 +1,7 @@
 'use client';
 import DashboardLayout from '@/components/DashboardLayout';
-import { LayoutDashboard, Video, Search, DollarSign, Briefcase, CheckCircle2 } from 'lucide-react';
+import CreatorTermsPanel from '@/components/CreatorTermsPanel';
+import { Briefcase, CheckCircle2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { browseCampaigns, applyToCampaign } from '@/lib/api';
 import { ApiError } from '@/lib/api/client';
@@ -52,6 +53,10 @@ export default function CreatorBrowse() {
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-900">Browse Open Campaigns</h1>
         <p className="text-gray-500 text-sm">Vetted creator opportunities managed by the UGCFlow team.</p>
+      </div>
+
+      <div className="mb-8">
+        <CreatorTermsPanel compact />
       </div>
 
       {loading ? (

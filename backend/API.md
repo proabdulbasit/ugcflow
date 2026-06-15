@@ -1,6 +1,6 @@
 # UGCFlow API Reference
 
-**Base URL:** `http://localhost:4000`  
+**Base URL:** `http://localhost:4000` (local) or your Render backend URL  
 **Auth:** JWT via `Authorization: Bearer <token>` or httpOnly cookie `token`
 
 ---
@@ -8,11 +8,21 @@
 ## Import into Postman
 
 1. Open Postman → **Import**
-2. Import these files:
+2. Import:
    - `backend/postman/UGCFlow-API.postman_collection.json`
-   - `backend/postman/UGCFlow-Local.postman_environment.json`
-3. Select environment **UGCFlow Local**
-4. Run **Auth → Login** (token auto-saves to `{{token}}`)
+   - `backend/postman/UGCFlow-Local.postman_environment.json` (local)
+   - `backend/postman/UGCFlow-Production.postman_environment.json` (production)
+3. Select the environment and set `baseUrl`, `jwtSecret`, `adminSeedSecret`
+4. Run **Auth → Setup Admin** or **Login** (token auto-saves to `{{token}}`)
+
+---
+
+## Typical flow
+
+1. **Register** brand/creator → `applicationStatus: pending` (no JWT)
+2. **Admin** approves via `/api/brands/:id/status` or `/api/creators/:id/status`
+3. **Login** → receive JWT
+4. Brand buys credits → creates campaigns → admin assigns creators → creator submits deliverable → brand/admin reviews
 
 ---
 
@@ -20,7 +30,7 @@
 
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
-| GET | `/health` | No | Health check `{ ok: true }` |
+| GET | `/health` | No | `{ ok: true }` when DB ready; `503` while connecting |
 
 ---
 
@@ -28,10 +38,11 @@
 
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
-| POST | `/api/auth/register` | No | Register brand or creator |
-| POST | `/api/auth/login` | No | Login, returns JWT |
+| POST | `/api/auth/register` | No | Register brand or creator (no JWT) |
+| POST | `/api/auth/login` | No | Login; blocked if pending/rejected |
 | POST | `/api/auth/logout` | No | Clear session cookie |
 | GET | `/api/auth/me` | Yes | Current user + role data |
+| POST | `/api/auth/setup-admin` | Secret header | Create/reset admin account |
 | POST | `/api/auth/promote-admin` | Secret header | Promote user to admin |
 
 ### Register Brand
@@ -47,6 +58,7 @@ POST /api/auth/register
   "brandGoals": "Scale UGC"
 }
 ```
+Response: `{ user, applicationStatus: "pending", message }` — **no token**
 
 ### Register Creator
 ```json
@@ -66,12 +78,16 @@ POST /api/auth/register
 POST /api/auth/login
 { "email": "brand@example.com", "password": "password123" }
 ```
+Returns `{ user, token }` or **403** if pending/rejected.
 
-### Promote Admin
+### Setup / Promote Admin
 ```
-POST /api/auth/promote-admin
 Header: x-admin-seed-secret: <ADMIN_SEED_SECRET>
-Body: { "email": "user@example.com" }
+POST /api/auth/setup-admin
+{ "email": "admin@example.com", "password": "password123", "fullName": "Admin" }
+
+POST /api/auth/promote-admin
+{ "email": "user@example.com" }
 ```
 
 ---
@@ -103,13 +119,24 @@ Body: { "email": "user@example.com" }
 | GET | `/api/brands/billing` | Credits + payment history |
 | GET | `/api/brands/campaigns` | List own campaigns |
 | POST | `/api/brands/campaigns` | Create campaign (89 credits) |
-| GET | `/api/brands/campaigns/:id` | Campaign + deliverables |
+| GET | `/api/brands/campaigns/:id` | Campaign + deliverables + applications |
 
 ### Create Campaign
 ```json
 POST /api/brands/campaigns
-{ "title": "Summer UGC", "brief": "30s TikTok review" }
+{
+  "title": "Summer Skincare UGC",
+  "brief": "30s TikTok review of vitamin C serum",
+  "referenceVideoUrl": "https://tiktok.com/@example/video/123",
+  "productUrl": "https://acme.com/products/serum",
+  "targetPlatform": "TikTok",
+  "videoFormat": "Vertical 9:16, 30-45 seconds",
+  "talkingPoints": "Hydration, morning routine, glow",
+  "dosAndDonts": "Do show texture. Don't mention competitors."
+}
 ```
+**Required:** `title`, `brief`  
+**Cost:** 89 credits (refunded if create fails)
 
 ---
 
@@ -121,7 +148,7 @@ POST /api/brands/campaigns
 | GET | `/api/creators/browse` | Browse active campaigns (approved only) |
 | POST | `/api/creators/applications` | Apply to campaign |
 | GET | `/api/creators/assignments` | List assignments |
-| GET | `/api/creators/assignments/:campaignId` | Assignment detail |
+| GET | `/api/creators/assignments/:campaignId` | Assignment + full brief |
 | GET | `/api/creators/earnings` | Earnings list |
 
 ### Apply to Campaign
@@ -137,8 +164,8 @@ POST /api/creators/applications
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET | `/api/campaigns` | List all campaigns |
-| GET | `/api/campaigns/:id` | Campaign detail + creators |
-| POST | `/api/campaigns/:id/assign` | Assign creator |
+| GET | `/api/campaigns/:id` | Detail with applicants + assigned creators |
+| POST | `/api/campaigns/:id/assign` | Assign creator (marks application approved) |
 
 ```json
 POST /api/campaigns/:id/assign
@@ -151,9 +178,17 @@ POST /api/campaigns/:id/assign
 
 | Method | Endpoint | Role | Description |
 |--------|----------|------|-------------|
+| POST | `/api/deliverables` | Creator | Submit or resubmit deliverable |
 | PATCH | `/api/deliverables/:id/review` | Brand / Admin | Approve/reject |
 | GET | `/api/deliverables/admin?status=all` | Admin | List submissions |
 
+### Submit Deliverable
+```json
+POST /api/deliverables
+{ "campaignId": "<id>", "fileUrl": "https://drive.google.com/..." }
+```
+
+### Review Deliverable
 ```json
 PATCH /api/deliverables/:id/review
 { "status": "approved", "feedback": "Great work!" }
@@ -194,12 +229,15 @@ PATCH /api/creators/:id/status
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
 | GET | `/api/payments/admin` | Admin | List payments |
-| POST | `/api/payments/reconcile` | No | Stripe checkout reconcile |
+| POST | `/api/payments/reconcile` | Internal secret | Stripe checkout reconcile |
 | POST | `/api/payments/webhook-complete` | Internal secret | Stripe webhook handler |
+
+**Internal routes** require header: `x-internal-secret: <JWT_SECRET>`
 
 ### Reconcile
 ```json
 POST /api/payments/reconcile
+Header: x-internal-secret: <JWT_SECRET>
 {
   "brandId": "...",
   "packageId": "...",
@@ -214,7 +252,7 @@ POST /api/payments/reconcile
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/admin/overview` | Dashboard overview (stats, pending applications, payments, submission counts) |
+| GET | `/api/admin/overview` | Stats, pending applications, submission counts, revenue, recent payments |
 
 ---
 
@@ -222,9 +260,9 @@ POST /api/payments/reconcile
 
 | Role | Access |
 |------|--------|
-| `brand` | Brand dashboard, campaigns, billing |
-| `creator` | Browse jobs, assignments, earnings |
-| `admin` | All admin routes + all dashboards |
+| `brand` | Brand dashboard, campaigns, billing, review deliverables |
+| `creator` | Browse jobs, apply, assignments, submit deliverables, earnings |
+| `admin` | All admin routes + assign creators + approve applications |
 
 ---
 
@@ -246,4 +284,4 @@ Campaign creation cost: **89 credits**
 { "error": "Error message" }
 ```
 
-Common status codes: `400` Bad Request, `401` Unauthorized, `403` Forbidden, `404` Not Found, `409` Conflict
+Common status codes: `400` Bad Request, `401` Unauthorized, `403` Forbidden, `404` Not Found, `409` Conflict, `503` Service Unavailable (health/DB)

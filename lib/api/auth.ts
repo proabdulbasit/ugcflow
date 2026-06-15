@@ -21,10 +21,12 @@ type ApplyPayload = {
   brandGoals?: string;
   portfolioUrl?: string;
   bio?: string;
+  address?: string;
+  termsAccepted: boolean;
 };
 
 /** Submit brand application — does not log the user in. */
-export async function applyBrand(data: Omit<ApplyPayload, 'portfolioUrl' | 'bio'> & {
+export async function applyBrand(data: Omit<ApplyPayload, 'portfolioUrl' | 'bio' | 'address'> & {
   companyName: string;
   websiteUrl: string;
   brandGoals: string;
@@ -40,6 +42,7 @@ export async function applyBrand(data: Omit<ApplyPayload, 'portfolioUrl' | 'bio'
 export async function applyCreator(data: Omit<ApplyPayload, 'companyName' | 'websiteUrl' | 'brandGoals'> & {
   portfolioUrl: string;
   bio: string;
+  address: string;
 }) {
   clearToken();
   return apiFetch<AuthResponse>('/api/auth/register', {

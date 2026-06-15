@@ -7,7 +7,7 @@ const router = Router();
 router.patch('/profile', requireAuth, async (req, res) => {
   try {
     const userId = req.user!.userId;
-    const { fullName, companyName, websiteUrl, portfolioUrl, bio } = req.body;
+    const { fullName, companyName, websiteUrl, portfolioUrl, bio, address } = req.body;
 
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ error: 'User not found' });
@@ -24,6 +24,7 @@ router.patch('/profile', requireAuth, async (req, res) => {
       await Creator.findByIdAndUpdate(userId, {
         ...(portfolioUrl !== undefined && { portfolioUrl: String(portfolioUrl).trim() }),
         ...(bio !== undefined && { bio: String(bio).trim() }),
+        ...(address !== undefined && { address: String(address).trim() }),
       });
     }
 

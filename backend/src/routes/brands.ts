@@ -199,6 +199,7 @@ async function enrichApplications(campaignId: import('mongoose').Types.ObjectId)
                 full_name: creator.fullName,
                 email: creator.email,
                 portfolio_url: creatorProfile?.portfolioUrl,
+                address: creatorProfile?.address,
               },
             }
           : null,

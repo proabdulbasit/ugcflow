@@ -27,6 +27,7 @@ export default function SettingsPage() {
             setRoleData({
               portfolio_url: rd.portfolioUrl,
               bio: rd.bio,
+              address: rd.address,
             });
           } else if (user.role === 'brand') {
             setRoleData({
@@ -58,6 +59,7 @@ export default function SettingsPage() {
       if (profile.role === 'creator') {
         payload.portfolioUrl = roleData.portfolio_url;
         payload.bio = roleData.bio;
+        payload.address = roleData.address;
       } else if (profile.role === 'brand') {
         payload.companyName = roleData.company_name;
         payload.websiteUrl = roleData.website_url;
@@ -132,6 +134,15 @@ export default function SettingsPage() {
                 </>
               ) : (
                 <>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Mailing Address</label>
+                    <textarea
+                      value={roleData?.address || ''}
+                      onChange={(e) => setRoleData({ ...roleData, address: e.target.value })}
+                      placeholder="Street address, city, state/province, postal code, country"
+                      className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none h-24"
+                    />
+                  </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Portfolio URL</label>
                     <input 
