@@ -1,7 +1,8 @@
 import { Router } from 'express';
 import { Payment, Package, Brand } from '../models/index.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
-import { incrementBrandCredits, creditsForPackageName } from '../services/credits.js';
+import { incrementBrandCredits, creditsForPackage } from '../services/credits.js';
+import { higherTier, tierFromPackageName } from '../config/packages.js';
 
 const router = Router();
 
@@ -57,8 +58,15 @@ router.post('/reconcile', async (req, res) => {
     const pkg = await Package.findById(packageId);
     if (!pkg) return res.status(404).json({ error: 'Package not found' });
 
-    const creditsToAdd = creditsForPackageName(pkg.name, pkg.videoCount);
+    const creditsToAdd = creditsForPackage(pkg.videoCount, pkg.name);
     await incrementBrandCredits(brandId, creditsToAdd);
+
+    const purchasedTier = pkg.tier ?? tierFromPackageName(pkg.name);
+    const brand = await Brand.findById(brandId);
+    if (brand) {
+      brand.packageTier = higherTier(brand.packageTier, purchasedTier);
+      await brand.save();
+    }
 
     await Payment.create({
       brandId,
@@ -89,8 +97,15 @@ router.post('/webhook-complete', async (req, res) => {
     const pkg = await Package.findById(packageId);
     if (!pkg) return res.status(404).json({ error: 'Package not found' });
 
-    const creditsToAdd = creditsForPackageName(pkg.name, pkg.videoCount);
+    const creditsToAdd = creditsForPackage(pkg.videoCount, pkg.name);
     await incrementBrandCredits(brandId, creditsToAdd);
+
+    const purchasedTier = pkg.tier ?? tierFromPackageName(pkg.name);
+    const brand = await Brand.findById(brandId);
+    if (brand) {
+      brand.packageTier = higherTier(brand.packageTier, purchasedTier);
+      await brand.save();
+    }
 
     await Payment.create({
       brandId,

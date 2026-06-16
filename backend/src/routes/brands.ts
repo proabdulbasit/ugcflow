@@ -10,9 +10,9 @@ import {
 } from '../models/index.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import { spendBrandCredits, incrementBrandCredits } from '../services/credits.js';
+import { CAMPAIGN_CREDIT_COST, tierConfig } from '../config/packages.js';
 
 const router = Router();
-const CAMPAIGN_COST = 89;
 
 router.get('/me', requireAuth, requireRole('brand'), async (req, res) => {
   const brand = await Brand.findById(req.user!.userId);
@@ -106,9 +106,15 @@ router.post('/campaigns', requireAuth, requireRole('brand'), async (req, res) =>
     if (!title?.trim()) return res.status(400).json({ error: 'title is required' });
     if (!brief?.trim()) return res.status(400).json({ error: 'brief is required' });
 
-    const spent = await spendBrandCredits(brandId, CAMPAIGN_COST);
+    const brand = await Brand.findById(brandId);
+    if (!brand) return res.status(404).json({ error: 'Brand profile not found' });
+
+    const tierSettings = tierConfig(brand.packageTier ?? 'starter');
+    const spent = await spendBrandCredits(brandId, CAMPAIGN_CREDIT_COST);
     if (!spent) {
-      return res.status(400).json({ error: `Not enough credits. You need ${CAMPAIGN_COST} credits.` });
+      return res.status(400).json({
+        error: `Not enough credits. You need ${CAMPAIGN_CREDIT_COST} credits to launch a campaign (1 UGC video). Purchase a package on the pricing page.`,
+      });
     }
 
     try {
@@ -124,11 +130,15 @@ router.post('/campaigns', requireAuth, requireRole('brand'), async (req, res) =>
         dosAndDonts: dosAndDonts?.trim() || undefined,
         status: 'active',
         payoutAmount: 89,
+        maxCreators: tierSettings.maxCreators,
+        revisionRounds: tierSettings.revisionRounds,
+        matchingTier: tierSettings.matchingTier,
+        turnaroundDays: tierSettings.turnaroundDays,
       });
 
       return res.status(201).json({ campaign });
     } catch (createErr) {
-      await incrementBrandCredits(brandId, CAMPAIGN_COST);
+      await incrementBrandCredits(brandId, CAMPAIGN_CREDIT_COST);
       throw createErr;
     }
   } catch (err: any) {

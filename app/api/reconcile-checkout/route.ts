@@ -2,12 +2,6 @@ import { NextResponse } from 'next/server';
 import { getStripe } from '@/lib/stripe';
 import { API_URL } from '@/lib/api/client';
 
-const CREDITS_BY_PACKAGE_NAME: Array<{ match: RegExp; credits: number }> = [
-  { match: /starter/i, credits: 267 },
-  { match: /growth/i, credits: 534 },
-  { match: /scale/i, credits: 890 },
-];
-
 export async function POST(req: Request) {
   try {
     const { sessionId } = await req.json();

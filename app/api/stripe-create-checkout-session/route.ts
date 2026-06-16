@@ -47,7 +47,7 @@ async function createCheckoutWithPriceData(
     line_items: [
       {
         price_data: {
-          currency: 'usd',
+          currency: 'aud',
           product_data: { name: pkg.name },
           unit_amount: unitAmount,
         },

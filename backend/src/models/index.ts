@@ -33,6 +33,7 @@ export interface IBrand {
   brandGoals?: string;
   status: ApplicationStatus;
   credits: number;
+  packageTier?: 'starter' | 'growth' | 'scale';
   termsAcceptedAt?: Date;
   createdAt: Date;
 }
@@ -45,6 +46,7 @@ const brandSchema = new mongoose.Schema<IBrand>(
     brandGoals: String,
     status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
     credits: { type: Number, default: 0 },
+    packageTier: { type: String, enum: ['starter', 'growth', 'scale'] },
     termsAcceptedAt: Date,
   },
   { timestamps: { createdAt: true, updatedAt: false } }
@@ -79,9 +81,17 @@ export const Creator = mongoose.model<ICreator>('Creator', creatorSchema);
 export interface IPackage {
   _id: mongoose.Types.ObjectId;
   name: string;
+  tagline?: string;
   description?: string;
   price: number;
+  currency: string;
   videoCount: number;
+  creatorCount: number;
+  revisionRounds: number;
+  turnaroundDays: number;
+  matchingTier: string;
+  tier: 'starter' | 'growth' | 'scale';
+  features: string[];
   stripePriceId?: string;
   createdAt: Date;
 }
@@ -89,9 +99,17 @@ export interface IPackage {
 const packageSchema = new mongoose.Schema<IPackage>(
   {
     name: { type: String, required: true },
+    tagline: String,
     description: String,
     price: { type: Number, required: true },
-    videoCount: { type: Number, default: 0 },
+    currency: { type: String, default: 'AUD' },
+    videoCount: { type: Number, default: 1 },
+    creatorCount: { type: Number, default: 1 },
+    revisionRounds: { type: Number, default: 0 },
+    turnaroundDays: { type: Number, default: 5 },
+    matchingTier: { type: String, default: 'standard' },
+    tier: { type: String, enum: ['starter', 'growth', 'scale'], required: true },
+    features: { type: [String], default: [] },
     stripePriceId: String,
   },
   { timestamps: { createdAt: true, updatedAt: false } }
@@ -112,6 +130,10 @@ export interface ICampaign {
   dosAndDonts?: string;
   status: CampaignStatus;
   payoutAmount: number;
+  maxCreators: number;
+  revisionRounds: number;
+  matchingTier: string;
+  turnaroundDays: number;
   createdAt: Date;
 }
 
@@ -128,6 +150,10 @@ const campaignSchema = new mongoose.Schema<ICampaign>(
     dosAndDonts: String,
     status: { type: String, enum: ['draft', 'active', 'completed'], default: 'active' },
     payoutAmount: { type: Number, default: 89 },
+    maxCreators: { type: Number, default: 1 },
+    revisionRounds: { type: Number, default: 0 },
+    matchingTier: { type: String, default: 'standard' },
+    turnaroundDays: { type: Number, default: 5 },
   },
   { timestamps: { createdAt: true, updatedAt: false } }
 );

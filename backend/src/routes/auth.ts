@@ -181,6 +181,7 @@ router.get('/me', requireAuth, async (req, res) => {
           brandGoals: brand.brandGoals,
           status: brand.status,
           credits: brand.credits,
+          packageTier: brand.packageTier,
         }
       : null;
   } else if (user.role === 'creator') {

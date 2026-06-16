@@ -121,6 +121,13 @@ router.post('/:id/assign', requireAuth, requireRole('admin'), async (req, res) =
     const campaign = await Campaign.findById(campaignId);
     if (!campaign) return res.status(404).json({ error: 'Campaign not found' });
 
+    const assignedCount = await CampaignCreator.countDocuments({ campaignId: campaign._id });
+    if (assignedCount >= (campaign.maxCreators ?? 1)) {
+      return res.status(400).json({
+        error: `This campaign allows up to ${campaign.maxCreators ?? 1} creator(s). Upgrade your package tier for more creator slots.`,
+      });
+    }
+
     const creator = await Creator.findById(creatorId);
     if (!creator || creator.status !== 'approved') {
       return res.status(400).json({ error: 'Creator must be approved' });

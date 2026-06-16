@@ -66,6 +66,14 @@ router.post('/', requireAuth, requireRole('creator'), async (req, res) => {
         return res.status(400).json({ error: 'Your submission is pending review' });
       }
 
+      const campaign = await Campaign.findById(campaignId);
+      const maxRevisions = campaign?.revisionRounds ?? 0;
+      if ((existing.revisionCount ?? 0) >= maxRevisions) {
+        return res.status(400).json({
+          error: `Maximum revision rounds (${maxRevisions}) reached for this campaign.`,
+        });
+      }
+
       existing.fileUrl = fileUrl.trim();
       existing.status = 'pending';
       existing.feedback = undefined;

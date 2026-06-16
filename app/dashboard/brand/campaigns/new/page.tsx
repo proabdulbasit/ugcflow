@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { createBrandCampaign } from '@/lib/api';
 import { ApiError } from '@/lib/api/client';
 import { TARGET_PLATFORMS, VIDEO_FORMATS } from '@/lib/campaign-brief';
+import { CAMPAIGN_CREDIT_COST } from '@/lib/packages';
 import { toast } from '@/lib/toast';
 import { useRouter } from 'next/navigation';
 
@@ -19,7 +20,6 @@ export default function NewCampaign() {
   const [videoFormat, setVideoFormat] = useState('vertical_9_16');
   const [talkingPoints, setTalkingPoints] = useState('');
   const [dosAndDonts, setDosAndDonts] = useState('');
-  const campaignCostCredits = 89;
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -173,8 +173,12 @@ export default function NewCampaign() {
                 After you launch, our team sources vetted creators, manages the brief, and delivers ready-to-run video ads to your dashboard.
               </p>
               <div className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">Campaign cost</div>
-              <div className="text-lg font-black text-gray-900">{campaignCostCredits} credits</div>
-              <div className="text-xs text-gray-500 mt-1">Credits are deducted when you launch.</div>
+              <div className="text-lg font-black text-gray-900">
+                {CAMPAIGN_CREDIT_COST} credits
+              </div>
+              <div className="text-xs text-gray-500 mt-1">
+                {CAMPAIGN_CREDIT_COST} credits = 1 UGC video. Deducted when you launch.
+              </div>
             </div>
 
             <button

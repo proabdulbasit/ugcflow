@@ -118,7 +118,7 @@ POST /api/auth/promote-admin
 | GET | `/api/brands/overview` | Dashboard stats |
 | GET | `/api/brands/billing` | Credits + payment history |
 | GET | `/api/brands/campaigns` | List own campaigns |
-| POST | `/api/brands/campaigns` | Create campaign (89 credits) |
+| POST | `/api/brands/campaigns` | Create campaign (89 credits per video) |
 | GET | `/api/brands/campaigns/:id` | Campaign + deliverables + applications |
 
 ### Create Campaign
@@ -136,7 +136,9 @@ POST /api/brands/campaigns
 }
 ```
 **Required:** `title`, `brief`  
-**Cost:** 89 credits (refunded if create fails)
+**Cost:** 89 credits per UGC video (refunded if create fails)
+
+Campaign limits follow your active package tier (creators per campaign, revision rounds, matching priority).
 
 ---
 
@@ -242,7 +244,7 @@ Header: x-internal-secret: <JWT_SECRET>
   "brandId": "...",
   "packageId": "...",
   "paymentIntentId": "pi_...",
-  "amount": 267
+  "amount": 179
 }
 ```
 
@@ -266,15 +268,15 @@ Header: x-internal-secret: <JWT_SECRET>
 
 ---
 
-## Credit Packages
+## Credit Packages (AUD)
 
-| Package | Credits |
-|---------|---------|
-| Starter | 267 |
-| Growth | 534 |
-| Scale | 890 |
+| Package | Price | Credits | Videos | Creators / Campaign | Revision Rounds |
+|---------|-------|---------|--------|---------------------|-----------------|
+| Starter | $179 AUD | 89 | 1 | 1 | 0 |
+| Growth | $449 AUD | 267 | 3 | 3 | 1 |
+| Scale | $899 AUD | 534 | 6 | 6 | 2 |
 
-Campaign creation cost: **89 credits**
+Campaign launch cost: **89 credits** per UGC video
 
 ---
 

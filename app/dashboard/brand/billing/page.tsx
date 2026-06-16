@@ -4,6 +4,7 @@ import { LayoutDashboard, Video, CreditCard, Settings, Zap, CheckCircle2 } from 
 import { Suspense, useEffect, useState } from 'react';
 import { getBrandBilling } from '@/lib/api';
 import { ApiError } from '@/lib/api/client';
+import { CAMPAIGN_CREDIT_COST } from '@/lib/packages';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 
@@ -84,9 +85,11 @@ function BrandBillingInner() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
         <div className="md:col-span-2 bg-indigo-600 rounded-3xl p-8 text-white shadow-xl shadow-indigo-100 flex flex-col md:flex-row justify-between items-center gap-6">
           <div>
-            <div className="text-indigo-100 text-sm font-medium mb-1">Available Credits</div>
+            <div className="text-indigo-100 text-sm font-medium mb-1">Available Video Credits</div>
             <div className="text-4xl sm:text-5xl font-extrabold mb-2">{loading ? '...' : credits}</div>
-            <p className="text-indigo-100 text-sm">Creating a campaign costs 89 credits.</p>
+            <p className="text-indigo-100 text-sm">
+              Launching a campaign uses {CAMPAIGN_CREDIT_COST} credits per UGC video.
+            </p>
             {reconcileMessage ? (
               <p className="text-indigo-100 text-xs mt-2">{reconcileMessage}</p>
             ) : null}
@@ -133,7 +136,9 @@ function BrandBillingInner() {
                 <tr key={payment.id}>
                   <td className="px-6 py-4 font-medium text-gray-900">{payment.packages?.name || 'Custom Package'}</td>
                   <td className="px-6 py-4 text-sm text-gray-500">{new Date(payment.created_at).toLocaleDateString()}</td>
-                  <td className="px-6 py-4 font-bold text-gray-900">${payment.amount}</td>
+                  <td className="px-6 py-4 font-bold text-gray-900">
+                    {payment.amount != null ? `$${payment.amount} AUD` : '—'}
+                  </td>
                   <td className="px-6 py-4">
                     <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-green-50 text-green-600">
                       {payment.status}

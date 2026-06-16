@@ -40,10 +40,4 @@ export async function spendBrandCredits(brandId: string, amount: number): Promis
   }
 }
 
-export function creditsForPackageName(name: string, videoCount: number): number {
-  const lower = name.toLowerCase();
-  if (lower.includes('starter')) return 267;
-  if (lower.includes('growth')) return 534;
-  if (lower.includes('scale')) return 890;
-  return videoCount || 0;
-}
+export { creditsForPackage } from '../config/packages.js';

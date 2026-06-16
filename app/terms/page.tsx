@@ -29,8 +29,9 @@ export default function Terms() {
           <h2 className="text-2xl font-bold text-gray-900 mb-4">3. Credits & Payments</h2>
           <ul className="list-disc pl-6 text-gray-600 space-y-2">
             <li>Credits are purchased by Brands and have no cash value.</li>
-            <li>One (1) credit is typically equivalent to one (1) approved UGC video deliverable.</li>
-            <li>Credits are non-refundable once a Creator has been hired for a campaign.</li>
+            <li>Each UGC video campaign costs {89} credits ({89} credits = 1 video).</li>
+            <li>Starter, Growth, and Scale packages include 89, 267, and 534 credits respectively.</li>
+            <li>Credits are non-refundable once a creator has been assigned to a campaign.</li>
             <li>Payments are processed securely via Stripe. UGCFlow does not store credit card information.</li>
           </ul>
         </section>

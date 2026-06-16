@@ -1,27 +1,7 @@
 import 'dotenv/config';
 import { connectDb } from './config/db.js';
+import { PACKAGE_DEFINITIONS } from './config/packages.js';
 import { Package } from './models/index.js';
-
-const PACKAGES = [
-  {
-    name: 'Starter Package',
-    description: 'Best for testing creatives',
-    price: 267,
-    videoCount: 3,
-  },
-  {
-    name: 'Growth Package',
-    description: 'Best for consistent ad testing',
-    price: 534,
-    videoCount: 6,
-  },
-  {
-    name: 'Scale Package',
-    description: 'Best for brands ready to scale',
-    price: 890,
-    videoCount: 10,
-  },
-];
 
 async function seed() {
   const uri = process.env.MONGODB_URI;
@@ -29,8 +9,25 @@ async function seed() {
 
   await connectDb(uri);
 
-  for (const pkg of PACKAGES) {
-    await Package.findOneAndUpdate({ name: pkg.name }, pkg, { upsert: true, new: true });
+  for (const pkg of PACKAGE_DEFINITIONS) {
+    await Package.findOneAndUpdate(
+      { tier: pkg.tier },
+      {
+        name: pkg.name,
+        tagline: pkg.tagline,
+        description: pkg.features.join('\n'),
+        price: pkg.price,
+        currency: pkg.currency,
+        videoCount: pkg.videoCount,
+        creatorCount: pkg.creatorCount,
+        revisionRounds: pkg.revisionRounds,
+        turnaroundDays: pkg.turnaroundDays,
+        matchingTier: pkg.matchingTier,
+        tier: pkg.tier,
+        features: pkg.features,
+      },
+      { upsert: true, new: true }
+    );
     console.log('Seeded package:', pkg.name);
   }
 

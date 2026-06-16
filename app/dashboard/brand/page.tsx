@@ -67,7 +67,7 @@ function BrandDashboardInner() {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
-          <div className="text-gray-500 text-sm mb-1">Available Credits</div>
+          <div className="text-gray-500 text-sm mb-1">Video Credits</div>
           <div className="text-2xl font-bold text-indigo-600">{loading ? '...' : stats.credits}</div>
         </div>
         <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">

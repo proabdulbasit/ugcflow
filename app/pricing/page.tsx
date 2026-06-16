@@ -5,17 +5,19 @@ import { useState, useEffect } from 'react';
 import { getPackages } from '@/lib/api';
 import { getMe } from '@/lib/api/auth';
 import { ApiError } from '@/lib/api/client';
+import {
+  CAMPAIGN_CREDIT_COST,
+  CREDITS_PER_VIDEO,
+  formatPackagePrice,
+  mergePackagesForPricing,
+  packageCredits,
+  type PricingPackage,
+} from '@/lib/packages';
 import Link from 'next/link';
 import StripePurchaseButton from '@/components/StripePurchaseButton';
 
-const CREDITS_PER_PACKAGE: Record<string, number> = {
-  starter: 267,
-  growth: 534,
-  scale: 890,
-};
-
 export default function PricingPage() {
-  const [packages, setPackages] = useState<any[]>([]);
+  const [packages, setPackages] = useState<PricingPackage[]>(mergePackagesForPricing());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [user, setUser] = useState<any>(null);
@@ -30,8 +32,8 @@ export default function PricingPage() {
           setUser(null);
         }
 
-        const { packages } = await getPackages();
-        setPackages(packages);
+        const { packages: data } = await getPackages();
+        setPackages(mergePackagesForPricing(data));
       } catch (err) {
         console.error('Error fetching data:', err);
         setError(err instanceof ApiError ? err.message : 'Failed to load pricing');
@@ -48,7 +50,12 @@ export default function PricingPage() {
       <div className="pt-24 sm:pt-32 pb-16 sm:pb-20 px-4 sm:px-6">
         <div className="max-w-4xl mx-auto text-center mb-12 sm:mb-16">
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-gray-900 mb-4">Simple, Transparent Pricing</h1>
-          <p className="text-base sm:text-xl text-gray-600">High-quality UGC content at scale. No hidden fees.</p>
+          <p className="text-base sm:text-xl text-gray-600">
+            Choose a UGC package, launch campaign briefs, and get video ads delivered by our creator network.
+          </p>
+          <p className="text-sm text-gray-500 mt-3">
+            Each campaign uses {CAMPAIGN_CREDIT_COST} credits per UGC video ({CREDITS_PER_VIDEO} credits = 1 video).
+          </p>
         </div>
 
         {loading ? (
@@ -62,105 +69,86 @@ export default function PricingPage() {
             <p className="text-red-700 text-sm mb-4">{error}</p>
             <button onClick={() => window.location.reload()} className="text-indigo-600 font-bold hover:underline">Try Again</button>
           </div>
-        ) : packages.length === 0 ? (
-          <div className="max-w-md mx-auto bg-gray-50 p-12 rounded-3xl border border-gray-100 text-center">
-            <Zap className="mx-auto text-gray-400 mb-4" size={48} />
-            <h3 className="text-xl font-bold text-gray-900 mb-2">No packages available</h3>
-            <p className="text-gray-500 mb-6">We're currently updating our pricing plans. Please check back later or contact support.</p>
-            <Link href="/" className="bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold inline-block">Back to Home</Link>
-          </div>
         ) : (
           <div className="max-w-6xl mx-auto">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              {packages
-                // Only show the 3 canonical package products.
-                .filter((pkg) => /package/i.test(String(pkg.name || '')))
-                .slice(0, 3)
-                .map((pkg) => (
-                <div 
-                  key={pkg.id} 
-                  className={`relative flex flex-col bg-white rounded-3xl border ${
-                    String(pkg.name).toLowerCase().includes('growth package')
-                      ? 'border-indigo-600 ring-1 ring-indigo-600'
-                      : 'border-gray-100'
-                  } p-8 shadow-sm hover:shadow-md transition-all`}
-                >
-                  {String(pkg.name).toLowerCase().includes('growth package') && (
-                    <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-indigo-600 text-white px-4 py-1 rounded-full text-sm font-bold">
-                      Most Popular
-                    </div>
-                  )}
-                  
-                  <div className="mb-8">
-                    <h3 className="text-2xl font-bold text-gray-900 mb-2">{pkg.name}</h3>
-                    <div className="flex items-baseline gap-1 mb-4">
-                      <span className="text-4xl font-extrabold text-gray-900">${pkg.price}</span>
-                      <span className="text-gray-500 font-medium">/one-time</span>
-                    </div>
-                    <div className="inline-flex items-center gap-2 mb-3 bg-indigo-50 text-indigo-700 px-3 py-1.5 rounded-full text-xs font-bold">
-                      {(() => {
-                        const key =
-                          String(pkg.name).toLowerCase().includes('starter') ? 'starter' :
-                          String(pkg.name).toLowerCase().includes('growth') ? 'growth' :
-                          'scale';
-                        return `${CREDITS_PER_PACKAGE[key]} credits`;
-                      })()}
-                    </div>
-                    <p className="text-gray-600 text-sm leading-relaxed">
-                      {String(pkg.name).toLowerCase().includes('starter package')
-                        ? 'Best for testing creatives'
-                        : String(pkg.name).toLowerCase().includes('growth package')
-                          ? 'Best for consistent ad testing'
-                          : 'Best for brands ready to scale'}
-                    </p>
-                  </div>
+              {packages.map((pkg) => {
+                const isGrowth = pkg.tier === 'growth';
 
-                  <ul className="space-y-4 mb-8 flex-grow">
-                    {pkg.description?.split('. ').map((feature: string, idx: number) => (
-                      feature && (
-                        <li key={idx} className="flex items-start gap-3 text-gray-700">
-                          <Check size={18} className="text-indigo-600 mt-1 shrink-0" />
-                          <span className="text-sm leading-tight">{feature.replace(/\.$/, '')}</span>
-                        </li>
-                      )
-                    ))}
-                  </ul>
-
-                  <div className="mt-auto">
-                    {user?.role === 'brand' ? (
-                      <div className="w-full">
-                        <StripePurchaseButton 
-                          priceId={pkg.stripe_price_id} 
-                          packageId={pkg.id}
-                        />
+                return (
+                  <div
+                    key={pkg.tier}
+                    className={`relative flex flex-col bg-white rounded-3xl border ${
+                      isGrowth ? 'border-indigo-600 ring-1 ring-indigo-600' : 'border-gray-100'
+                    } p-8 shadow-sm hover:shadow-md transition-all`}
+                  >
+                    {isGrowth && (
+                      <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-indigo-600 text-white px-4 py-1 rounded-full text-sm font-bold">
+                        Most Popular
                       </div>
-                    ) : user ? (
-                      <Link 
-                        href="/dashboard"
-                        className="w-full inline-flex items-center justify-center rounded-xl bg-gray-100 px-6 py-4 text-gray-700 font-bold hover:bg-gray-200 transition-all"
-                      >
-                        Go to Dashboard
-                      </Link>
-                    ) : (
-                      <Link 
-                        href="/login" 
-                        className="w-full inline-flex items-center justify-center rounded-xl bg-indigo-600 px-6 py-4 text-white font-bold hover:bg-indigo-700 transition-all"
-                      >
-                        Login to Buy
-                      </Link>
                     )}
+
+                    <div className="mb-8">
+                      <h3 className="text-2xl font-bold text-gray-900 mb-2">{pkg.name}</h3>
+                      <div className="flex items-baseline gap-1 mb-4">
+                        <span className="text-4xl font-extrabold text-gray-900">
+                          {formatPackagePrice(pkg.price, pkg.currency)}
+                        </span>
+                        <span className="text-gray-500 font-medium">/ one-time</span>
+                      </div>
+                      <div className="inline-flex items-center gap-2 mb-3 bg-indigo-50 text-indigo-700 px-3 py-1.5 rounded-full text-xs font-bold">
+                        {packageCredits(pkg.videoCount)} credits · {pkg.videoCount} video{pkg.videoCount === 1 ? '' : 's'}
+                      </div>
+                      <p className="text-gray-600 text-sm leading-relaxed">{pkg.tagline}</p>
+                    </div>
+
+                    <div className="mb-3 text-xs font-bold uppercase tracking-wider text-gray-400">Includes</div>
+                    <ul className="space-y-4 mb-8 flex-grow">
+                      {pkg.features.map((feature) => (
+                        <li key={feature} className="flex items-start gap-3 text-gray-700">
+                          <Check size={18} className="text-indigo-600 mt-1 shrink-0" />
+                          <span className="text-sm leading-tight">{feature}</span>
+                        </li>
+                      ))}
+                    </ul>
+
+                    <div className="mt-auto">
+                      {user?.role === 'brand' ? (
+                        pkg.id ? (
+                          <StripePurchaseButton priceId={pkg.stripe_price_id} packageId={pkg.id} />
+                        ) : (
+                          <p className="text-center text-sm text-gray-500">Package checkout unavailable — contact support.</p>
+                        )
+                      ) : user ? (
+                        <Link
+                          href="/dashboard"
+                          className="w-full inline-flex items-center justify-center rounded-xl bg-gray-100 px-6 py-4 text-gray-700 font-bold hover:bg-gray-200 transition-all"
+                        >
+                          Go to Dashboard
+                        </Link>
+                      ) : (
+                        <Link
+                          href="/login"
+                          className="w-full inline-flex items-center justify-center rounded-xl bg-indigo-600 px-6 py-4 text-white font-bold hover:bg-indigo-700 transition-all"
+                        >
+                          Login to Buy
+                        </Link>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             <div className="mt-20 bg-indigo-50 rounded-3xl p-8 md:p-12 flex flex-col md:flex-row items-center justify-between gap-8">
               <div className="max-w-md">
                 <h3 className="text-2xl font-bold text-indigo-900 mb-2">Ready to scale your content?</h3>
-                <p className="text-indigo-700">Apply as a brand today. Once approved, you can purchase credits and start your first campaign immediately.</p>
+                <p className="text-indigo-700">
+                  Apply as a brand, purchase a package, then launch campaign briefs. Higher tiers unlock more creators per campaign and revision rounds.
+                </p>
               </div>
-              <Link 
-                href="/brand-apply" 
+              <Link
+                href="/brand-apply"
                 className="bg-indigo-600 text-white px-8 py-4 rounded-2xl font-bold hover:bg-indigo-700 transition-all flex items-center gap-2 whitespace-nowrap"
               >
                 Apply Now
