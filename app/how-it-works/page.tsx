@@ -1,5 +1,20 @@
 import Navbar from '@/components/Navbar';
 
+const SAMPLE_MEDIA = [
+  {
+    type: 'video' as const,
+    src: encodeURI('/WhatsApp Video 2026-06-14 at 15.42.00.mp4'),
+  },
+  {
+    type: 'image' as const,
+    src: encodeURI('/WhatsApp Image 2026-06-14 at 15.42.07.jpeg'),
+  },
+  {
+    type: 'video' as const,
+    src: encodeURI('/WhatsApp Video 2026-06-14 at 15.42.23.mp4'),
+  },
+];
+
 export default function HowItWorks() {
   const steps = [
     { title: "1. Choose a Package", desc: "Select the UGC package that fits your brand's needs and budget." },
@@ -23,6 +38,31 @@ export default function HowItWorks() {
                 <h3 className="text-2xl font-bold mb-2">{step.title}</h3>
                 <p className="text-gray-600 text-lg">{step.desc}</p>
               </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-16 grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6">
+          {SAMPLE_MEDIA.map((item, i) => (
+            <div
+              key={i}
+              className="relative aspect-[9/16] overflow-hidden rounded-2xl border border-gray-100 bg-gray-50 shadow-sm"
+            >
+              {item.type === 'video' ? (
+                <video
+                  src={item.src}
+                  controls
+                  playsInline
+                  preload="metadata"
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <img
+                  src={item.src}
+                  alt="Sample UGC content"
+                  className="h-full w-full object-cover"
+                />
+              )}
             </div>
           ))}
         </div>
