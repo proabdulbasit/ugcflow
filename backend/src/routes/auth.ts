@@ -13,6 +13,11 @@ import {
   requireRole,
   signToken,
 } from '../middleware/auth.js';
+import {
+  normalizePortfolioMedia,
+  validatePortfolioMedia,
+  type PortfolioMediaItem,
+} from '../services/creatorProfile.js';
 
 const router = Router();
 
@@ -28,20 +33,35 @@ function setAuthCookie(res: import('express').Response, token: string) {
 
 router.post('/register', async (req, res) => {
   try {
-    const { email, password, fullName, role, companyName, websiteUrl, brandGoals, portfolioUrl, bio, address, termsAccepted } =
-      req.body as {
-        email: string;
-        password: string;
-        fullName: string;
-        role: 'brand' | 'creator';
-        companyName?: string;
-        websiteUrl?: string;
-        brandGoals?: string;
-        portfolioUrl?: string;
-        bio?: string;
-        address?: string;
-        termsAccepted?: boolean;
-      };
+    const {
+      email,
+      password,
+      fullName,
+      role,
+      companyName,
+      websiteUrl,
+      brandGoals,
+      portfolioUrl,
+      profilePictureUrl,
+      portfolioMedia,
+      bio,
+      address,
+      termsAccepted,
+    } = req.body as {
+      email: string;
+      password: string;
+      fullName: string;
+      role: 'brand' | 'creator';
+      companyName?: string;
+      websiteUrl?: string;
+      brandGoals?: string;
+      portfolioUrl?: string;
+      profilePictureUrl?: string;
+      portfolioMedia?: PortfolioMediaItem[];
+      bio?: string;
+      address?: string;
+      termsAccepted?: boolean;
+    };
 
     if (!email || !password || !role) {
       return res.status(400).json({ error: 'email, password, and role are required' });
@@ -57,6 +77,10 @@ router.post('/register', async (req, res) => {
     }
     if (role === 'creator' && !address?.trim()) {
       return res.status(400).json({ error: 'Mailing address is required for creators' });
+    }
+    if (role === 'creator') {
+      const portfolioError = validatePortfolioMedia(portfolioMedia);
+      if (portfolioError) return res.status(400).json({ error: portfolioError });
     }
 
     const existing = await User.findOne({ email: email.toLowerCase().trim() });
@@ -85,6 +109,8 @@ router.post('/register', async (req, res) => {
       await Creator.create({
         _id: user._id,
         portfolioUrl: portfolioUrl?.trim(),
+        profilePictureUrl: profilePictureUrl?.trim(),
+        portfolioMedia: normalizePortfolioMedia(portfolioMedia ?? []),
         bio: bio?.trim(),
         address: address?.trim(),
         status: 'pending',
@@ -189,6 +215,8 @@ router.get('/me', requireAuth, async (req, res) => {
     roleData = creator
       ? {
           portfolioUrl: creator.portfolioUrl,
+          profilePictureUrl: creator.profilePictureUrl,
+          portfolioMedia: creator.portfolioMedia ?? [],
           bio: creator.bio,
           address: creator.address,
           status: creator.status,

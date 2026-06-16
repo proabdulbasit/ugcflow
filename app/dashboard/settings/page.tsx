@@ -1,9 +1,12 @@
 'use client';
 import DashboardLayout from '@/components/DashboardLayout';
+import CreatorPortfolioUpload from '@/components/CreatorPortfolioUpload';
 import { User, Globe, Briefcase, Save } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { getMe, updateProfile } from '@/lib/api/auth';
+import type { PortfolioMediaItem } from '@/lib/api/uploads';
 import { ApiError } from '@/lib/api/client';
+import { MIN_PORTFOLIO_ITEMS } from '@/lib/creator-portfolio';
 import { toast } from '@/lib/toast';
 
 export default function SettingsPage() {
@@ -26,6 +29,8 @@ export default function SettingsPage() {
           if (user.role === 'creator') {
             setRoleData({
               portfolio_url: rd.portfolioUrl,
+              profile_picture_url: rd.profilePictureUrl,
+              portfolio_media: (rd.portfolioMedia as PortfolioMediaItem[]) ?? [],
               bio: rd.bio,
               address: rd.address,
             });
@@ -57,7 +62,14 @@ export default function SettingsPage() {
       };
 
       if (profile.role === 'creator') {
+        if ((roleData.portfolio_media?.length ?? 0) < MIN_PORTFOLIO_ITEMS) {
+          toast.error(`Upload at least ${MIN_PORTFOLIO_ITEMS} portfolio samples.`);
+          setSaving(false);
+          return;
+        }
         payload.portfolioUrl = roleData.portfolio_url;
+        payload.profilePictureUrl = roleData.profile_picture_url;
+        payload.portfolioMedia = roleData.portfolio_media;
         payload.bio = roleData.bio;
         payload.address = roleData.address;
       } else if (profile.role === 'brand') {
@@ -134,6 +146,12 @@ export default function SettingsPage() {
                 </>
               ) : (
                 <>
+                  <CreatorPortfolioUpload
+                    profilePictureUrl={roleData?.profile_picture_url || ''}
+                    onProfilePictureChange={(url) => setRoleData({ ...roleData, profile_picture_url: url })}
+                    portfolioMedia={roleData?.portfolio_media || []}
+                    onPortfolioChange={(items) => setRoleData({ ...roleData, portfolio_media: items })}
+                  />
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Mailing Address</label>
                     <textarea

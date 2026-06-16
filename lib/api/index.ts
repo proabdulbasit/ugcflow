@@ -12,6 +12,8 @@ export async function getPackage(id: string) {
   return apiFetch<any>(`/api/packages/${id}`);
 }
 
+export * from './uploads';
+
 // Brand
 export async function getBrandOverview() {
   return apiFetch<any>('/api/brands/overview');

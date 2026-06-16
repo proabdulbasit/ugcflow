@@ -57,6 +57,12 @@ export const Brand = mongoose.model<IBrand>('Brand', brandSchema);
 export interface ICreator {
   _id: mongoose.Types.ObjectId;
   portfolioUrl?: string;
+  profilePictureUrl?: string;
+  portfolioMedia?: Array<{
+    url: string;
+    type: 'image' | 'video';
+    key: string;
+  }>;
   bio?: string;
   address?: string;
   status: ApplicationStatus;
@@ -64,10 +70,21 @@ export interface ICreator {
   createdAt: Date;
 }
 
+const portfolioMediaSchema = new mongoose.Schema(
+  {
+    url: { type: String, required: true },
+    type: { type: String, enum: ['image', 'video'], required: true },
+    key: { type: String, required: true },
+  },
+  { _id: false }
+);
+
 const creatorSchema = new mongoose.Schema<ICreator>(
   {
     _id: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     portfolioUrl: String,
+    profilePictureUrl: String,
+    portfolioMedia: { type: [portfolioMediaSchema], default: [] },
     bio: String,
     address: String,
     status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },

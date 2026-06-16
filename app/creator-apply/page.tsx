@@ -1,10 +1,13 @@
 'use client';
 import Navbar from '@/components/Navbar';
 import TermsAcceptance from '@/components/TermsAcceptance';
+import CreatorPortfolioUpload from '@/components/CreatorPortfolioUpload';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { applyCreator } from '@/lib/api/auth';
+import type { PortfolioMediaItem } from '@/lib/api/uploads';
 import { ApiError } from '@/lib/api/client';
+import { MIN_PORTFOLIO_ITEMS } from '@/lib/creator-portfolio';
 import { CREATOR_TERMS } from '@/lib/terms/creator-terms';
 import { toast } from '@/lib/toast';
 
@@ -12,6 +15,9 @@ export default function CreatorApply() {
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
+  const [profilePictureUrl, setProfilePictureUrl] = useState('');
+  const [portfolioMedia, setPortfolioMedia] = useState<PortfolioMediaItem[]>([]);
+  const uploadSessionId = useMemo(() => crypto.randomUUID(), []);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -46,6 +52,11 @@ export default function CreatorApply() {
       setLoading(false);
       return;
     }
+    if (portfolioMedia.length < MIN_PORTFOLIO_ITEMS) {
+      toast.error(`Upload at least ${MIN_PORTFOLIO_ITEMS} portfolio samples before applying.`);
+      setLoading(false);
+      return;
+    }
 
     try {
       await applyCreator({
@@ -55,6 +66,8 @@ export default function CreatorApply() {
         portfolioUrl,
         bio,
         address,
+        profilePictureUrl: profilePictureUrl || undefined,
+        portfolioMedia,
         termsAccepted: true,
       });
       setSubmitted(true);
@@ -110,6 +123,15 @@ export default function CreatorApply() {
                 <input name="email" required type="email" className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="jane@example.com" />
               </div>
             </div>
+
+            <CreatorPortfolioUpload
+              uploadSessionId={uploadSessionId}
+              profilePictureUrl={profilePictureUrl}
+              onProfilePictureChange={setProfilePictureUrl}
+              portfolioMedia={portfolioMedia}
+              onPortfolioChange={setPortfolioMedia}
+            />
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Portfolio URL (TikTok, Instagram, or Website)</label>
               <input name="portfolioUrl" required type="url" className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="https://tiktok.com/@username" />

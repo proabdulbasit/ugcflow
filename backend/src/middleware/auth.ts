@@ -47,6 +47,18 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
   }
 }
 
+export async function optionalAuth(req: Request, _res: Response, next: NextFunction) {
+  const token = getTokenFromRequest(req);
+  if (token) {
+    try {
+      req.user = verifyToken(token);
+    } catch {
+      // Ignore invalid token for optional auth routes.
+    }
+  }
+  next();
+}
+
 export function requireRole(...roles: UserRole[]) {
   return (req: Request, res: Response, next: NextFunction) => {
     if (!req.user) return res.status(401).json({ error: 'Unauthorized' });

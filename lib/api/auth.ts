@@ -1,4 +1,5 @@
 import { apiFetch, clearToken, saveToken, type ApiUser } from './client';
+import type { PortfolioMediaItem } from './uploads';
 
 export interface AuthResponse {
   user: ApiUser;
@@ -43,6 +44,8 @@ export async function applyCreator(data: Omit<ApplyPayload, 'companyName' | 'web
   portfolioUrl: string;
   bio: string;
   address: string;
+  profilePictureUrl?: string;
+  portfolioMedia: PortfolioMediaItem[];
 }) {
   clearToken();
   return apiFetch<AuthResponse>('/api/auth/register', {
