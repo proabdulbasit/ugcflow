@@ -30,7 +30,7 @@ export const PACKAGE_DISPLAY: PackageDisplay[] = [
     creatorCount: 1,
     features: [
       '1 x UGC creator',
-      '1 x UGC video',
+      '1 x 30–60 second UGC video',
       'Standard creator matching',
       'Basic brief submission support',
       '5 business day turnaround',
@@ -47,7 +47,7 @@ export const PACKAGE_DISPLAY: PackageDisplay[] = [
     creatorCount: 3,
     features: [
       'Up to 3 x UGC creators',
-      '3 x UGC videos',
+      '3 x 30–60 second UGC videos',
       'Creator selection prioritisation',
       'Light script/hook guidance',
       '1 revision round per video',
@@ -65,7 +65,7 @@ export const PACKAGE_DISPLAY: PackageDisplay[] = [
     creatorCount: 6,
     features: [
       'Up to 6 x UGC creators',
-      '6 x UGC videos',
+      '6 x 30–60 second UGC videos',
       'Priority creator matching',
       'Advanced brief support (hooks, angles, ad strategy suggestions)',
       '2 revision rounds per video',

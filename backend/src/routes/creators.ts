@@ -10,6 +10,7 @@ import {
   Brand,
 } from '../models/index.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
+import { creatorPrivateProfile } from '../services/creatorVisibility.js';
 
 const router = Router();
 
@@ -175,6 +176,7 @@ router.get('/', requireAuth, requireRole('admin'), async (_req, res) => {
         portfolioMedia: c.portfolioMedia ?? [],
         bio: c.bio,
         address: c.address,
+        ...creatorPrivateProfile(c),
         status: c.status,
         createdAt: c.createdAt,
         profiles: profile

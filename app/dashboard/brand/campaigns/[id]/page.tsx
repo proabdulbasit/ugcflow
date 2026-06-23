@@ -2,6 +2,7 @@
 
 import DashboardLayout from '@/components/DashboardLayout';
 import CampaignBriefDetails from '@/components/CampaignBriefDetails';
+import CreatorProfileCard from '@/components/CreatorProfileCard';
 import { getBrandCampaign, reviewDeliverable } from '@/lib/api';
 import { ApiError } from '@/lib/api/client';
 import { toast } from '@/lib/toast';
@@ -127,37 +128,19 @@ export default function BrandCampaignDetailPage() {
                   Our team is sourcing vetted creators for your brief. You&apos;ll see matched creators here once assigned.
                 </div>
               ) : (
-                <div className="space-y-2">
+                <div className="space-y-4">
                   {applications.map((app) => (
-                    <div key={app.id} className="p-4 rounded-xl border border-gray-100 flex justify-between items-center">
-                      <div>
-                        <div className="font-medium text-gray-900">{app.creators?.profiles?.full_name ?? 'Creator'}</div>
-                        <div className="text-xs text-gray-500">{app.creators?.profiles?.email ?? '—'}</div>
-                        {app.creators?.profiles?.address ? (
-                          <div className="text-xs text-gray-600 mt-1 whitespace-pre-wrap">
-                            {app.creators.profiles.address}
-                          </div>
-                        ) : null}
-                        {app.creators?.profiles?.portfolio_url ? (
-                          <a
-                            href={app.creators.profiles.portfolio_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-xs text-indigo-600 hover:underline inline-flex items-center gap-1 mt-1"
-                          >
-                            View portfolio <ExternalLink size={12} />
-                          </a>
-                        ) : null}
-                      </div>
-                      <span className="text-[10px] font-bold uppercase px-2 py-1 rounded-full bg-orange-50 text-orange-600">
-                        {app.status}
-                      </span>
-                    </div>
+                    <CreatorProfileCard
+                      key={app.id}
+                      profiles={app.creators?.profiles}
+                      status={app.status}
+                      isAssigned={app.is_assigned ?? app.status === 'approved'}
+                    />
                   ))}
                 </div>
               )}
               <p className="text-xs text-gray-500 mt-3">
-                UGCFlow manages creator matching and briefing — you review finished video ads below.
+                Review creator profiles and portfolio samples. Shipping details are shared once a creator is assigned to your campaign.
               </p>
             </section>
 

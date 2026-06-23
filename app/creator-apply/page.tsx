@@ -48,7 +48,7 @@ export default function CreatorApply() {
       return;
     }
     if (!address.trim()) {
-      toast.error('Mailing address is required.');
+      toast.error('Shipping details are required.');
       setLoading(false);
       return;
     }
@@ -137,14 +137,16 @@ export default function CreatorApply() {
               <input name="portfolioUrl" required type="url" className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="https://tiktok.com/@username" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Mailing Address</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Shipping Details</label>
               <textarea
                 name="address"
                 required
                 placeholder="Street address, city, state/province, postal code, country"
                 className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none h-24"
               />
-              <p className="text-xs text-gray-500 mt-1">Used for product shipments on physical product campaigns.</p>
+              <p className="text-xs text-gray-500 mt-1">
+                Used for product shipments. Private until a brand accepts you for a campaign.
+              </p>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Short Bio</label>

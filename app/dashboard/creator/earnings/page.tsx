@@ -41,6 +41,10 @@ export default function CreatorEarnings() {
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-900">My Earnings</h1>
         <p className="text-gray-500 text-sm">Track your income and payout status.</p>
+        <p className="text-sm text-indigo-700 mt-2">
+          Payouts are made within 5 business days of content approval. Update PayPal or bank details in{' '}
+          <a href="/dashboard/settings" className="font-bold underline">Account Settings</a>.
+        </p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">

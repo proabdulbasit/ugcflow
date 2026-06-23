@@ -19,6 +19,12 @@ function mapCreator(c: any): CreatorRow {
         }
       : null,
     address: c.address,
+    abn: c.abn,
+    payoutPaypalEmail: c.payoutPaypalEmail,
+    payoutBankName: c.payoutBankName,
+    payoutBankAccountName: c.payoutBankAccountName,
+    payoutBankBsb: c.payoutBankBsb,
+    payoutBankAccountNumber: c.payoutBankAccountNumber,
     profilePictureUrl: c.profilePictureUrl,
     portfolioMedia: c.portfolioMedia ?? [],
     bio: c.bio,
@@ -135,8 +141,11 @@ function CreatorDetailModal({
                   '—'
                 )}
               </DetailField>
-              <DetailField label="Mailing Address" className="sm:col-span-2">
+              <DetailField label="Shipping Details" className="sm:col-span-2">
                 <span className="whitespace-pre-wrap">{creator.address?.trim() || '—'}</span>
+              </DetailField>
+              <DetailField label="ABN">
+                {creator.abn?.trim() || '—'}
               </DetailField>
               <DetailField label="Bio" className="sm:col-span-2">
                 <span className="whitespace-pre-wrap">{creator.bio?.trim() || '—'}</span>
@@ -196,6 +205,28 @@ function CreatorDetailModal({
                 ))}
               </div>
             )}
+          </div>
+
+          <div className="rounded-xl border border-amber-100 bg-amber-50/50 p-5 space-y-4">
+            <h3 className="text-sm font-bold uppercase tracking-wider text-gray-900">Private — Payout Details</h3>
+            <p className="text-xs text-gray-600">
+              Payouts are made within 5 business days of content approval.
+            </p>
+            <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4">
+              <DetailField label="PayPal Email">
+                {creator.payoutPaypalEmail ? (
+                  <a href={`mailto:${creator.payoutPaypalEmail}`} className="text-indigo-600 hover:underline">
+                    {creator.payoutPaypalEmail}
+                  </a>
+                ) : (
+                  '—'
+                )}
+              </DetailField>
+              <DetailField label="Bank Name">{creator.payoutBankName?.trim() || '—'}</DetailField>
+              <DetailField label="Account Name">{creator.payoutBankAccountName?.trim() || '—'}</DetailField>
+              <DetailField label="BSB">{creator.payoutBankBsb?.trim() || '—'}</DetailField>
+              <DetailField label="Account Number">{creator.payoutBankAccountNumber?.trim() || '—'}</DetailField>
+            </dl>
           </div>
 
           <div className="flex flex-col sm:flex-row gap-3 pt-2 border-t border-gray-100">
@@ -271,7 +302,8 @@ export default function AdminCreatorsPage() {
     const email = (c.profiles?.email ?? '').toLowerCase();
     const status = (c.status ?? '').toLowerCase();
     const address = (c.address ?? '').toLowerCase();
-    return name.includes(q) || email.includes(q) || status.includes(q) || address.includes(q);
+    const abn = (c.abn ?? '').toLowerCase();
+    return name.includes(q) || email.includes(q) || status.includes(q) || address.includes(q) || abn.includes(q);
   });
 
   const statusBadge = (status: string) => (
@@ -292,7 +324,7 @@ export default function AdminCreatorsPage() {
     <DashboardLayout role="Admin" navRole="admin">
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-900">Creators</h1>
-        <p className="text-gray-500 text-sm">Approve or reject creator applications.</p>
+        <p className="text-gray-500 text-sm">Approve or reject creator applications. Click View Profile to see ABN and full details.</p>
       </div>
 
       <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm mb-6 flex items-center gap-3">
@@ -319,6 +351,7 @@ export default function AdminCreatorsPage() {
           <thead>
             <tr className="bg-gray-50 text-gray-500 text-xs font-bold uppercase tracking-wider">
               <th className="px-6 py-4">Creator</th>
+              <th className="px-6 py-4">ABN</th>
               <th className="px-6 py-4">Address</th>
               <th className="px-6 py-4">Portfolio</th>
               <th className="px-6 py-4">Status</th>
@@ -329,13 +362,13 @@ export default function AdminCreatorsPage() {
           <tbody className="divide-y divide-gray-50">
             {loading ? (
               <tr>
-                <td colSpan={6} className="px-6 py-10 text-center text-gray-400">
+                <td colSpan={7} className="px-6 py-10 text-center text-gray-400">
                   Loading creators…
                 </td>
               </tr>
             ) : filtered.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-6 py-10 text-center text-gray-400 italic">
+                <td colSpan={7} className="px-6 py-10 text-center text-gray-400 italic">
                   No creators found.
                 </td>
               </tr>
@@ -345,6 +378,13 @@ export default function AdminCreatorsPage() {
                   <td className="px-6 py-4">
                     <div className="font-bold text-gray-900">{c.profiles?.full_name ?? 'Unnamed creator'}</div>
                     <div className="text-xs text-gray-500">{c.profiles?.email ?? '—'}</div>
+                  </td>
+                  <td className="px-6 py-4">
+                    {c.abn?.trim() ? (
+                      <div className="text-sm font-mono text-gray-800">{c.abn.trim()}</div>
+                    ) : (
+                      <span className="text-xs text-gray-400">—</span>
+                    )}
                   </td>
                   <td className="px-6 py-4">
                     <div className="text-sm text-gray-700 max-w-xs whitespace-pre-wrap">{c.address || '—'}</div>

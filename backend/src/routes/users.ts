@@ -9,6 +9,12 @@ import {
 
 const router = Router();
 
+function trimOrUndefined(value: unknown) {
+  if (value === undefined) return undefined;
+  const trimmed = String(value).trim();
+  return trimmed || undefined;
+}
+
 router.patch('/profile', requireAuth, async (req, res) => {
   try {
     const userId = req.user!.userId;
@@ -16,11 +22,17 @@ router.patch('/profile', requireAuth, async (req, res) => {
       fullName,
       companyName,
       websiteUrl,
+      abn,
       portfolioUrl,
       profilePictureUrl,
       portfolioMedia,
       bio,
       address,
+      payoutPaypalEmail,
+      payoutBankName,
+      payoutBankAccountName,
+      payoutBankBsb,
+      payoutBankAccountNumber,
     } = req.body;
 
     const user = await User.findById(userId);
@@ -33,6 +45,7 @@ router.patch('/profile', requireAuth, async (req, res) => {
       await Brand.findByIdAndUpdate(userId, {
         ...(companyName !== undefined && { companyName: String(companyName).trim() }),
         ...(websiteUrl !== undefined && { websiteUrl: String(websiteUrl).trim() }),
+        ...(abn !== undefined && { abn: trimOrUndefined(abn) }),
       });
     } else if (user.role === 'creator') {
       if (portfolioMedia !== undefined) {
@@ -48,6 +61,16 @@ router.patch('/profile', requireAuth, async (req, res) => {
         }),
         ...(bio !== undefined && { bio: String(bio).trim() }),
         ...(address !== undefined && { address: String(address).trim() }),
+        ...(abn !== undefined && { abn: trimOrUndefined(abn) }),
+        ...(payoutPaypalEmail !== undefined && { payoutPaypalEmail: trimOrUndefined(payoutPaypalEmail) }),
+        ...(payoutBankName !== undefined && { payoutBankName: trimOrUndefined(payoutBankName) }),
+        ...(payoutBankAccountName !== undefined && {
+          payoutBankAccountName: trimOrUndefined(payoutBankAccountName),
+        }),
+        ...(payoutBankBsb !== undefined && { payoutBankBsb: trimOrUndefined(payoutBankBsb) }),
+        ...(payoutBankAccountNumber !== undefined && {
+          payoutBankAccountNumber: trimOrUndefined(payoutBankAccountNumber),
+        }),
       });
     }
 

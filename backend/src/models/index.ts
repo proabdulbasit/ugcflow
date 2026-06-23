@@ -31,6 +31,7 @@ export interface IBrand {
   companyName?: string;
   websiteUrl?: string;
   brandGoals?: string;
+  abn?: string;
   status: ApplicationStatus;
   credits: number;
   packageTier?: 'starter' | 'growth' | 'scale';
@@ -44,6 +45,7 @@ const brandSchema = new mongoose.Schema<IBrand>(
     companyName: String,
     websiteUrl: String,
     brandGoals: String,
+    abn: String,
     status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
     credits: { type: Number, default: 0 },
     packageTier: { type: String, enum: ['starter', 'growth', 'scale'] },
@@ -65,6 +67,12 @@ export interface ICreator {
   }>;
   bio?: string;
   address?: string;
+  abn?: string;
+  payoutPaypalEmail?: string;
+  payoutBankName?: string;
+  payoutBankAccountName?: string;
+  payoutBankBsb?: string;
+  payoutBankAccountNumber?: string;
   status: ApplicationStatus;
   termsAcceptedAt?: Date;
   createdAt: Date;
@@ -87,6 +95,12 @@ const creatorSchema = new mongoose.Schema<ICreator>(
     portfolioMedia: { type: [portfolioMediaSchema], default: [] },
     bio: String,
     address: String,
+    abn: String,
+    payoutPaypalEmail: String,
+    payoutBankName: String,
+    payoutBankAccountName: String,
+    payoutBankBsb: String,
+    payoutBankAccountNumber: String,
     status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
     termsAcceptedAt: Date,
   },

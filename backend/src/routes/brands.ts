@@ -6,11 +6,16 @@ import {
   Deliverable,
   Payment,
   CampaignApplication,
+  CampaignCreator,
   Creator,
 } from '../models/index.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import { spendBrandCredits, incrementBrandCredits } from '../services/credits.js';
 import { CAMPAIGN_CREDIT_COST, tierConfig } from '../config/packages.js';
+import {
+  creatorProfileForBrandApplicant,
+  creatorProfileForBrandAssigned,
+} from '../services/creatorVisibility.js';
 
 const router = Router();
 
@@ -194,25 +199,30 @@ router.get('/campaigns/:id', requireAuth, requireRole('brand'), async (req, res)
 
 async function enrichApplications(campaignId: import('mongoose').Types.ObjectId) {
   const applications = await CampaignApplication.find({ campaignId }).sort({ createdAt: -1 });
+  const assignments = await CampaignCreator.find({ campaignId });
+  const assignedIds = new Set(assignments.map((a) => a.creatorId.toString()));
+
   return Promise.all(
     applications.map(async (app) => {
       const creator = await User.findById(app.creatorId);
       const creatorProfile = await Creator.findById(app.creatorId);
+      const isAssigned =
+        assignedIds.has(app.creatorId.toString()) || app.status === 'approved';
+
+      const creatorView = isAssigned
+        ? creatorProfileForBrandAssigned(creatorProfile, creator
+            ? { id: creator._id.toString(), fullName: creator.fullName, email: creator.email }
+            : null)
+        : creatorProfileForBrandApplicant(creatorProfile, creator
+            ? { id: creator._id.toString(), fullName: creator.fullName, email: creator.email }
+            : null);
+
       return {
         id: app._id.toString(),
         status: app.status,
+        is_assigned: isAssigned,
         created_at: app.createdAt,
-        creators: creator
-          ? {
-              id: creator._id.toString(),
-              profiles: {
-                full_name: creator.fullName,
-                email: creator.email,
-                portfolio_url: creatorProfile?.portfolioUrl,
-                address: creatorProfile?.address,
-              },
-            }
-          : null,
+        creators: creatorView,
       };
     })
   );
@@ -229,6 +239,7 @@ router.get('/', requireAuth, requireRole('admin'), async (_req, res) => {
         companyName: b.companyName,
         websiteUrl: b.websiteUrl,
         brandGoals: b.brandGoals,
+        abn: b.abn,
         status: b.status,
         credits: b.credits,
         createdAt: b.createdAt,

@@ -18,6 +18,7 @@ import {
   validatePortfolioMedia,
   type PortfolioMediaItem,
 } from '../services/creatorProfile.js';
+import { creatorPrivateProfile } from '../services/creatorVisibility.js';
 
 const router = Router();
 
@@ -205,6 +206,7 @@ router.get('/me', requireAuth, async (req, res) => {
           companyName: brand.companyName,
           websiteUrl: brand.websiteUrl,
           brandGoals: brand.brandGoals,
+          abn: brand.abn,
           status: brand.status,
           credits: brand.credits,
           packageTier: brand.packageTier,
@@ -220,6 +222,7 @@ router.get('/me', requireAuth, async (req, res) => {
           bio: creator.bio,
           address: creator.address,
           status: creator.status,
+          ...creatorPrivateProfile(creator),
         }
       : null;
   }
