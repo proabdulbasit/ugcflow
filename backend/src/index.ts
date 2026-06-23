@@ -12,6 +12,7 @@ import campaignRoutes from './routes/campaigns.js';
 import deliverableRoutes from './routes/deliverables.js';
 import packageRoutes from './routes/packages.js';
 import uploadRoutes from './routes/uploads.js';
+import messageRoutes from './routes/messages.js';
 import paymentRoutes from './routes/payments.js';
 import adminRoutes from './routes/admin.js';
 
@@ -40,6 +41,7 @@ app.use('/api/campaigns', campaignRoutes);
 app.use('/api/deliverables', deliverableRoutes);
 app.use('/api/packages', packageRoutes);
 app.use('/api/uploads', uploadRoutes);
+app.use('/api/messages', messageRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/admin', adminRoutes);
 

@@ -32,6 +32,7 @@ export function getBrandNav(): NavItem[] {
   return [
     { label: 'Overview', icon: LayoutDashboard, href: '/dashboard/brand' },
     { label: 'My Campaigns', icon: Video, href: '/dashboard/brand/campaigns' },
+    { label: 'Messages', icon: MessageSquare, href: '/dashboard/messages' },
     { label: 'Billing', icon: CreditCard, href: '/dashboard/brand/billing' },
     { label: 'Settings', icon: Settings, href: '/dashboard/settings' },
   ];
@@ -42,6 +43,7 @@ export function getCreatorNav(): NavItem[] {
     { label: 'Overview', icon: LayoutDashboard, href: '/dashboard/creator' },
     { label: 'Browse Jobs', icon: Search, href: '/dashboard/creator/browse' },
     { label: 'My Assignments', icon: Video, href: '/dashboard/creator/assignments' },
+    { label: 'Messages', icon: MessageSquare, href: '/dashboard/messages' },
     { label: 'Earnings', icon: DollarSign, href: '/dashboard/creator/earnings' },
     { label: 'Settings', icon: Settings, href: '/dashboard/settings' },
   ];

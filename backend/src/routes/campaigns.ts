@@ -9,6 +9,7 @@ import {
   Deliverable,
 } from '../models/index.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
+import { notifyCreatorAssigned } from '../services/notifications.js';
 
 const router = Router();
 
@@ -143,6 +144,8 @@ router.post('/:id/assign', requireAuth, requireRole('admin'), async (req, res) =
       { campaignId: campaign._id, creatorId },
       { status: 'approved' }
     );
+
+    notifyCreatorAssigned(campaignId, creatorId);
 
     return res.json({ ok: true });
   } catch (err: any) {

@@ -11,6 +11,7 @@ import {
 } from '../models/index.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import { creatorPrivateProfile } from '../services/creatorVisibility.js';
+import { notifyCreatorApproved, notifyCreatorApplied } from '../services/notifications.js';
 
 const router = Router();
 
@@ -80,6 +81,8 @@ router.post('/applications', requireAuth, requireRole('creator'), async (req, re
       creatorId: req.user!.userId,
       status: 'pending',
     });
+
+    notifyCreatorApplied(campaignId, req.user!.userId);
 
     return res.status(201).json({ application });
   } catch (err: any) {
@@ -195,6 +198,7 @@ router.patch('/:id/status', requireAuth, requireRole('admin'), async (req, res) 
   }
   const creator = await Creator.findByIdAndUpdate(req.params.id, { status }, { new: true });
   if (!creator) return res.status(404).json({ error: 'Creator not found' });
+  if (status === 'approved') notifyCreatorApproved(creator._id.toString());
   return res.json({ creator });
 });
 

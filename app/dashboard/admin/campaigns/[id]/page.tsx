@@ -71,28 +71,6 @@ export default function AdminCampaignDetailPage() {
 
       try {
         await assignCreatorToCampaign(id, creatorId);
-
-        const creator =
-          applicants.find((c) => c.id === creatorId) ??
-          availableCreators.find((c) => c.id === creatorId);
-        const creatorEmail = creator?.profiles?.email;
-        const creatorName = creator?.profiles?.full_name;
-
-        if (creatorEmail) {
-          await fetch('/api/notifications', {
-            method: 'POST',
-            body: JSON.stringify({
-              type: 'CREATOR_ASSIGNED',
-              data: {
-                creatorEmail,
-                creatorName,
-                campaignTitle: campaign.title,
-                campaignId: id,
-              },
-            }),
-          });
-        }
-
         toast.success('Creator assigned to campaign');
         fetchData();
       } catch (err) {

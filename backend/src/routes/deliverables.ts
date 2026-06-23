@@ -8,6 +8,7 @@ import {
 } from '../models/index.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import { onDeliverableApproved } from '../services/earnings.js';
+import { notifyDeliverableSubmitted, notifyDeliverableReviewed } from '../services/notifications.js';
 
 const router = Router();
 
@@ -39,6 +40,13 @@ async function reviewDeliverable(
   if (status === 'approved') {
     await onDeliverableApproved(deliverable._id.toString());
   }
+
+  notifyDeliverableReviewed(
+    deliverable.campaignId.toString(),
+    deliverable.creatorId.toString(),
+    status,
+    feedback
+  );
 
   return { deliverable };
 }
@@ -80,6 +88,8 @@ router.post('/', requireAuth, requireRole('creator'), async (req, res) => {
       existing.revisionCount = (existing.revisionCount ?? 0) + 1;
       await existing.save();
 
+      notifyDeliverableSubmitted(campaignId, creatorId);
+
       return res.json({
         deliverable: {
           id: existing._id.toString(),
@@ -97,6 +107,8 @@ router.post('/', requireAuth, requireRole('creator'), async (req, res) => {
       status: 'pending',
       revisionCount: 0,
     });
+
+    notifyDeliverableSubmitted(campaignId, creatorId);
 
     return res.status(201).json({
       deliverable: {

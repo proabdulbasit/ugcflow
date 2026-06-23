@@ -3,6 +3,7 @@ import { Payment, Package, Brand } from '../models/index.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import { incrementBrandCredits, creditsForPackage } from '../services/credits.js';
 import { higherTier, tierFromPackageName } from '../config/packages.js';
+import { notifyPackagePurchased } from '../services/notifications.js';
 
 const router = Router();
 
@@ -76,6 +77,8 @@ router.post('/reconcile', async (req, res) => {
       status: 'completed',
     });
 
+    notifyPackagePurchased(brandId, pkg.name, amount ?? pkg.price, creditsToAdd);
+
     return res.json({ ok: true, creditsAdded: creditsToAdd });
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
@@ -114,6 +117,8 @@ router.post('/webhook-complete', async (req, res) => {
       stripePaymentIntentId: paymentIntentId,
       status: 'completed',
     });
+
+    notifyPackagePurchased(brandId, pkg.name, pkg.price, creditsToAdd);
 
     return res.json({ ok: true, creditsAdded: creditsToAdd });
   } catch (err: any) {

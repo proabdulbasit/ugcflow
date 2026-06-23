@@ -63,28 +63,6 @@ export default function BrandCampaignDetailPage() {
       setReviewingId(deliverableId);
       try {
         await reviewDeliverable(deliverableId, status, feedback);
-
-        const deliverable = deliverables.find((d) => d.id === deliverableId);
-        const creatorEmail = deliverable?.creators?.profiles?.email;
-        const creatorName = deliverable?.creators?.profiles?.full_name;
-
-        if (creatorEmail) {
-          await fetch('/api/notifications', {
-            method: 'POST',
-            body: JSON.stringify({
-              type: 'DELIVERABLE_REVIEWED',
-              data: {
-                creatorEmail,
-                creatorName,
-                campaignTitle: campaign.title,
-                status,
-                feedback,
-                campaignId: id,
-              },
-            }),
-          });
-        }
-
         toast.success(status === 'approved' ? 'Deliverable approved' : 'Deliverable rejected');
         fetchData();
       } catch (err) {

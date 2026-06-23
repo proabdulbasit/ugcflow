@@ -303,3 +303,24 @@ const paymentSchema = new mongoose.Schema<IPayment>(
 );
 
 export const Payment = mongoose.model<IPayment>('Payment', paymentSchema);
+
+export interface IMessage {
+  _id: mongoose.Types.ObjectId;
+  senderId: mongoose.Types.ObjectId;
+  recipientId: mongoose.Types.ObjectId;
+  subject?: string;
+  body: string;
+  createdAt: Date;
+}
+
+const messageSchema = new mongoose.Schema<IMessage>(
+  {
+    senderId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+    recipientId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+    subject: String,
+    body: { type: String, required: true },
+  },
+  { timestamps: { createdAt: true, updatedAt: false } }
+);
+
+export const Message = mongoose.model<IMessage>('Message', messageSchema);

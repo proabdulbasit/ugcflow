@@ -16,6 +16,7 @@ import {
   creatorProfileForBrandApplicant,
   creatorProfileForBrandAssigned,
 } from '../services/creatorVisibility.js';
+import { notifyNewCampaignToCreators } from '../services/notifications.js';
 
 const router = Router();
 
@@ -141,6 +142,8 @@ router.post('/campaigns', requireAuth, requireRole('brand'), async (req, res) =>
         turnaroundDays: tierSettings.turnaroundDays,
       });
 
+      notifyNewCampaignToCreators(campaign._id.toString(), campaign.title);
+
       return res.status(201).json({ campaign });
     } catch (createErr) {
       await incrementBrandCredits(brandId, CAMPAIGN_CREDIT_COST);
@@ -252,6 +255,8 @@ router.get('/', requireAuth, requireRole('admin'), async (_req, res) => {
   return res.json({ brands: enriched });
 });
 
+import { notifyBrandApproved } from '../services/notifications.js';
+
 router.patch('/:id/status', requireAuth, requireRole('admin'), async (req, res) => {
   const { status } = req.body as { status: 'approved' | 'rejected' };
   if (!['approved', 'rejected'].includes(status)) {
@@ -259,6 +264,7 @@ router.patch('/:id/status', requireAuth, requireRole('admin'), async (req, res) 
   }
   const brand = await Brand.findByIdAndUpdate(req.params.id, { status }, { new: true });
   if (!brand) return res.status(404).json({ error: 'Brand not found' });
+  if (status === 'approved') notifyBrandApproved(brand._id.toString());
   return res.json({ brand });
 });
 
