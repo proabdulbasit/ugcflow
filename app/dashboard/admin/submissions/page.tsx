@@ -59,29 +59,6 @@ export default function AdminSubmissionsPage() {
       setReviewingId(deliverableId);
       try {
         await reviewDeliverable(deliverableId, status, feedback);
-
-        const deliverable = deliverables.find((d) => d.id === deliverableId);
-        const creatorEmail = deliverable?.creators?.profiles?.email;
-        const creatorName = deliverable?.creators?.profiles?.full_name;
-        const campaignTitle = deliverable?.campaigns?.title;
-
-        if (creatorEmail) {
-          await fetch('/api/notifications', {
-            method: 'POST',
-            body: JSON.stringify({
-              type: 'DELIVERABLE_REVIEWED',
-              data: {
-                creatorEmail,
-                creatorName,
-                campaignTitle,
-                status,
-                feedback,
-                campaignId: deliverable?.campaign_id,
-              },
-            }),
-          });
-        }
-
         fetchDeliverables();
       } catch (err) {
         toast.error(err instanceof ApiError ? err.message : 'Review failed');

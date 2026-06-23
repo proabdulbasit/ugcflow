@@ -1,6 +1,6 @@
 'use client';
 import DashboardLayout from '@/components/DashboardLayout';
-import { getAdminProfiles } from '@/lib/api';
+import { getAdminProfiles, sendMessage as sendMessageApi } from '@/lib/api';
 import { ApiError } from '@/lib/api/client';
 import { toast } from '@/lib/toast';
 import { Search, Send } from 'lucide-react';
@@ -22,6 +22,7 @@ export default function AdminMessagingPage() {
   const [sending, setSending] = useState(false);
   const [query, setQuery] = useState('');
   const [recipientEmail, setRecipientEmail] = useState('');
+  const [recipientId, setRecipientId] = useState('');
   const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
 
@@ -50,30 +51,21 @@ export default function AdminMessagingPage() {
     return email.includes(q) || name.includes(q) || role.includes(q);
   });
 
-  const sendMessage = async (e: React.FormEvent) => {
+  const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!recipientEmail.trim() || !message.trim()) return;
+    if (!recipientId || !message.trim()) return;
     setSending(true);
     try {
-      const res = await fetch('/api/notifications', {
-        method: 'POST',
-        body: JSON.stringify({
-          type: 'ADMIN_MESSAGE',
-          data: {
-            to: recipientEmail.trim(),
-            subject: subject.trim() || 'Message from UGCFLOW Admin',
-            message: message.trim(),
-          },
-        }),
+      await sendMessageApi({
+        recipientId,
+        subject: subject.trim() || undefined,
+        body: message.trim(),
       });
-      if (!res.ok) {
-        const json = await res.json().catch(() => null);
-        toast.error(json?.error ?? 'Failed to send message.');
-      } else {
-        setSubject('');
-        setMessage('');
-        toast.success('Message sent successfully');
-      }
+      setSubject('');
+      setMessage('');
+      toast.success('Message sent successfully');
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Failed to send message');
     } finally {
       setSending(false);
     }
@@ -83,18 +75,22 @@ export default function AdminMessagingPage() {
     <DashboardLayout role="Admin" navRole="admin">
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-900">Messaging</h1>
-        <p className="text-gray-500 text-sm">Send a direct message to a brand or creator (currently logged via `/api/notifications`).</p>
+        <p className="text-gray-500 text-sm">Send a direct message to a brand or creator. They receive an email notification.</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
           <h3 className="font-bold text-gray-900 mb-4">Compose</h3>
-          <form onSubmit={sendMessage} className="space-y-4">
+          <form onSubmit={handleSend} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">To (email)</label>
               <input
                 value={recipientEmail}
-                onChange={(e) => setRecipientEmail(e.target.value)}
+                onChange={(e) => {
+                  setRecipientEmail(e.target.value);
+                  const match = profiles.find((p) => p.email === e.target.value.trim());
+                  setRecipientId(match?.id ?? '');
+                }}
                 className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
                 placeholder="name@company.com"
                 required
@@ -160,7 +156,10 @@ export default function AdminMessagingPage() {
               filtered.map((p: any) => (
                 <button
                   key={p.id}
-                  onClick={() => setRecipientEmail(p.email)}
+                  onClick={() => {
+                    setRecipientEmail(p.email);
+                    setRecipientId(p.id);
+                  }}
                   className="w-full text-left p-3 rounded-xl border border-gray-100 hover:bg-gray-50 transition-colors"
                 >
                   <div className="flex items-center justify-between gap-4">

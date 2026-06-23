@@ -18,7 +18,7 @@ export async function sendEmail({ to, subject, html }: { to: string; subject: st
 
   try {
     const { data, error } = await client.emails.send({
-      from: 'UGCFlow <notifications@ugcflow.com>',
+      from: process.env.RESEND_FROM || 'UGCFlow <onboarding@resend.dev>',
       to,
       subject,
       html,

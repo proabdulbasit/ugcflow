@@ -143,3 +143,18 @@ export async function getAdminPayments() {
 export async function getAdminProfiles() {
   return apiFetch<{ profiles: any[] }>('/api/users/profiles');
 }
+
+export async function getMessages() {
+  return apiFetch<{ messages: any[] }>('/api/messages');
+}
+
+export async function getMessageContacts() {
+  return apiFetch<{ contacts: any[] }>('/api/messages/contacts');
+}
+
+export async function sendMessage(data: { recipientId: string; subject?: string; body: string }) {
+  return apiFetch<any>('/api/messages', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
